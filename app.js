@@ -191,7 +191,7 @@ function generateComparisonTable(currentTP, currentSL) {
         const evColor = ev >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
         const evSign = ev >= 0 ? '+' : '';
         
-        html += `<tr class="${rowClass}">`;
+        html += `<tr class="${rowClass}" style="cursor: pointer;" onclick="applyPreset(${tp}, ${sl})">`;
         html += `<td style="color: var(--text-primary)">${tp}%/${sl}%</td>`;
         html += `<td style="color: var(--text-secondary)">1:${ratio.toFixed(2)}</td>`;
         html += `<td style="color: var(--accent-orange)">${reqWinRate.toFixed(0)}%</td>`;
@@ -322,6 +322,17 @@ function calculate() {
     
     // ===== 生成对照表 =====
     comparisonTableBodyEl.innerHTML = generateComparisonTable(takeProfitPercent, stopLossPercent);
+}
+
+/**
+ * 应用预设值
+ * @param {number} tp - 止盈百分比
+ * @param {number} sl - 止损百分比
+ */
+function applyPreset(tp, sl) {
+    takeProfitPercentInput.value = tp;
+    stopLossPercentInput.value = sl;
+    calculate();
 }
 
 /**
