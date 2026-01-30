@@ -502,6 +502,61 @@ body {
                 </div>
             </section>
 
+            <section class="card delta-section" style="border: 1px solid rgba(255, 146, 43, 0.3); background: linear-gradient(145deg, #2a1f14, #1a1510);">
+                <h2 class="card-title" style="color: #ff922b;">🎯 Delta / 胜率推荐</h2>
+                <p class="section-desc">根据止盈止损比例，计算所需胜率并推荐 Delta 范围</p>
+                
+                <div class="delta-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                    <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                        <span style="display: block; font-size: 0.75rem; color: #6a6a80; margin-bottom: 4px;">盈亏比</span>
+                        <span id="riskRewardRatio" style="display: block; font-size: 1.25rem; font-weight: 700; color: #ff922b;">1:2.67</span>
+                    </div>
+                    <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                        <span style="display: block; font-size: 0.75rem; color: #6a6a80; margin-bottom: 4px;">所需最低胜率</span>
+                        <span id="requiredWinRate" style="display: block; font-size: 1.25rem; font-weight: 700; color: #ff922b;">72.7%</span>
+                    </div>
+                </div>
+
+                <div class="delta-recommendation" style="background: rgba(255, 146, 43, 0.1); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 146, 43, 0.2);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="font-size: 1.2rem;">📊</span>
+                        <span style="font-weight: 600; color: #fff;">Short Leg Delta 建议</span>
+                    </div>
+                    <div id="deltaRecommendation" style="font-size: 1.5rem; font-weight: 700; color: #00d68f; margin-bottom: 8px;">
+                        ≤ 0.15
+                    </div>
+                    <div id="deltaExplanation" style="font-size: 0.8rem; color: #a0a0b8; line-height: 1.6;">
+                        建议选择 Delta ≤ 0.15 的期权（理论胜率 ~85%），给予约 12% 的安全边际
+                    </div>
+                </div>
+
+                <div style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                    <div style="font-size: 0.75rem; color: #6a6a80; margin-bottom: 8px;">Delta 与胜率对照表</div>
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; text-align: center; font-size: 0.7rem;">
+                        <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                            <div style="color: #ff922b; font-weight: 600;">0.30</div>
+                            <div style="color: #6a6a80;">~70%</div>
+                        </div>
+                        <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                            <div style="color: #ff922b; font-weight: 600;">0.20</div>
+                            <div style="color: #6a6a80;">~80%</div>
+                        </div>
+                        <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                            <div style="color: #ff922b; font-weight: 600;">0.15</div>
+                            <div style="color: #6a6a80;">~85%</div>
+                        </div>
+                        <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                            <div style="color: #ff922b; font-weight: 600;">0.10</div>
+                            <div style="color: #6a6a80;">~90%</div>
+                        </div>
+                        <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                            <div style="color: #ff922b; font-weight: 600;">0.05</div>
+                            <div style="color: #6a6a80;">~95%</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section class="card tips-section">
                 <h2 class="card-title">💡 富途设置提示</h2>
                 <div class="tips-content">
@@ -536,10 +591,54 @@ var summaryCreditEl = document.getElementById('summaryCredit');
 var summaryProfitEl = document.getElementById('summaryProfit');
 var summaryLossEl = document.getElementById('summaryLoss');
 
+// Delta推荐相关元素
+var riskRewardRatioEl = document.getElementById('riskRewardRatio');
+var requiredWinRateEl = document.getElementById('requiredWinRate');
+var deltaRecommendationEl = document.getElementById('deltaRecommendation');
+var deltaExplanationEl = document.getElementById('deltaExplanation');
+
 // 格式化价格
 function formatPrice(value) {
     if (isNaN(value) || value === null || value < 0) return '$0.00';
     return '$' + value.toFixed(2);
+}
+
+// Delta推荐函数
+function getDeltaRecommendation(requiredWinRate) {
+    // Delta与胜率的对应关系
+    var deltaTable = [
+        { delta: 0.05, winRate: 95, label: '≤ 0.05', desc: '极保守型，权利金较低但胜率极高' },
+        { delta: 0.10, winRate: 90, label: '≤ 0.10', desc: '保守型，权利金适中，胜率高' },
+        { delta: 0.15, winRate: 85, label: '≤ 0.15', desc: '平衡型，权利金和胜率均衡' },
+        { delta: 0.20, winRate: 80, label: '≤ 0.20', desc: '适中型，权利金较高' },
+        { delta: 0.25, winRate: 75, label: '≤ 0.25', desc: '激进型，权利金高但风险增加' },
+        { delta: 0.30, winRate: 70, label: '≤ 0.30', desc: '高风险型，不建议新手使用' }
+    ];
+    
+    // 找到刚好满足所需胜率的Delta（需要10-15%安全边际）
+    var safetyMargin = 10; // 安全边际百分比
+    var targetWinRate = requiredWinRate + safetyMargin;
+    
+    for (var i = 0; i < deltaTable.length; i++) {
+        if (deltaTable[i].winRate >= targetWinRate) {
+            return {
+                delta: deltaTable[i].delta,
+                label: deltaTable[i].label,
+                winRate: deltaTable[i].winRate,
+                margin: deltaTable[i].winRate - requiredWinRate,
+                desc: deltaTable[i].desc
+            };
+        }
+    }
+    
+    // 如果所需胜率太高，返回最保守的
+    return {
+        delta: 0.05,
+        label: '≤ 0.05',
+        winRate: 95,
+        margin: 95 - requiredWinRate,
+        desc: '需要极高胜率，建议重新调整止盈止损比例'
+    };
 }
 
 // 计算函数
@@ -576,6 +675,37 @@ function calculate() {
     summaryCreditEl.textContent = formatPrice(netCredit);
     summaryProfitEl.textContent = '+' + formatPrice(profitAmount) + ' (' + takeProfitPercent + '%)';
     summaryLossEl.textContent = '-' + formatPrice(lossAmount) + ' (' + stopLossPercent + '%)';
+
+    // 计算盈亏比和所需胜率
+    var riskRewardRatio = stopLossPercent / takeProfitPercent;
+    var requiredWinRate = (stopLossPercent / (takeProfitPercent + stopLossPercent)) * 100;
+    
+    // 更新盈亏比显示
+    riskRewardRatioEl.textContent = '1:' + riskRewardRatio.toFixed(2);
+    requiredWinRateEl.textContent = requiredWinRate.toFixed(1) + '%';
+    
+    // 根据所需胜率设置颜色
+    if (requiredWinRate > 80) {
+        requiredWinRateEl.style.color = '#ff4d6a'; // 红色 - 高风险
+    } else if (requiredWinRate > 70) {
+        requiredWinRateEl.style.color = '#ff922b'; // 橙色 - 中等
+    } else {
+        requiredWinRateEl.style.color = '#00d68f'; // 绿色 - 安全
+    }
+    
+    // 获取Delta推荐
+    var recommendation = getDeltaRecommendation(requiredWinRate);
+    deltaRecommendationEl.textContent = recommendation.label;
+    deltaExplanationEl.textContent = '建议 Delta ' + recommendation.label + '（理论胜率 ~' + recommendation.winRate + '%），安全边际 ' + recommendation.margin.toFixed(0) + '%。' + recommendation.desc;
+    
+    // 根据安全边际设置颜色
+    if (recommendation.margin >= 15) {
+        deltaRecommendationEl.style.color = '#00d68f'; // 绿色 - 充足
+    } else if (recommendation.margin >= 10) {
+        deltaRecommendationEl.style.color = '#ff922b'; // 橙色 - 适中
+    } else {
+        deltaRecommendationEl.style.color = '#ff4d6a'; // 红色 - 不足
+    }
 }
 
 // 为每个输入框绑定多种事件以确保iOS兼容性
