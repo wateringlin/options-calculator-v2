@@ -28,6 +28,12 @@ const summaryCreditEl = document.getElementById('summaryCredit');
 const summaryProfitEl = document.getElementById('summaryProfit');
 const summaryLossEl = document.getElementById('summaryLoss');
 
+// Delta Recommendation Elements
+const riskRewardRatioEl = document.getElementById('riskRewardRatio');
+const requiredWinRateEl = document.getElementById('requiredWinRate');
+const deltaRecommendationEl = document.getElementById('deltaRecommendation');
+const deltaExplanationEl = document.getElementById('deltaExplanation');
+
 /**
  * 格式化价格显示
  * @param {number} value - 价格值
@@ -38,6 +44,48 @@ function formatPrice(value) {
         return '$0.00';
     }
     return `$${value.toFixed(2)}`;
+}
+
+/**
+ * 根据所需胜率获取 Delta 推荐
+ * @param {number} requiredWinRate - 所需最低胜率
+ * @returns {object} - Delta 推荐对象
+ */
+function getDeltaRecommendation(requiredWinRate) {
+    // Delta 与胜率的对应关系
+    const deltaTable = [
+        { delta: 0.05, winRate: 95, label: '≤ 0.05', desc: '极保守型，权利金较低但胜率极高' },
+        { delta: 0.10, winRate: 90, label: '≤ 0.10', desc: '保守型，权利金适中，胜率高' },
+        { delta: 0.15, winRate: 85, label: '≤ 0.15', desc: '平衡型，权利金和胜率均衡' },
+        { delta: 0.20, winRate: 80, label: '≤ 0.20', desc: '适中型，权利金较高' },
+        { delta: 0.25, winRate: 75, label: '≤ 0.25', desc: '激进型，权利金高但风险增加' },
+        { delta: 0.30, winRate: 70, label: '≤ 0.30', desc: '高风险型，不建议新手使用' }
+    ];
+    
+    // 找到刚好满足所需胜率的 Delta（需要 10% 安全边际）
+    const safetyMargin = 10;
+    const targetWinRate = requiredWinRate + safetyMargin;
+    
+    for (let i = 0; i < deltaTable.length; i++) {
+        if (deltaTable[i].winRate >= targetWinRate) {
+            return {
+                delta: deltaTable[i].delta,
+                label: deltaTable[i].label,
+                winRate: deltaTable[i].winRate,
+                margin: deltaTable[i].winRate - requiredWinRate,
+                desc: deltaTable[i].desc
+            };
+        }
+    }
+    
+    // 如果所需胜率太高，返回最保守的
+    return {
+        delta: 0.05,
+        label: '≤ 0.05',
+        winRate: 95,
+        margin: 95 - requiredWinRate,
+        desc: '需要极高胜率，建议重新调整止盈止损比例'
+    };
 }
 
 /**
@@ -117,6 +165,37 @@ function calculate() {
     summaryCreditEl.textContent = formatPrice(netCredit);
     summaryProfitEl.textContent = `+${formatPrice(profitAmount)} (${takeProfitPercent}%)`;
     summaryLossEl.textContent = `-${formatPrice(lossAmount)} (${stopLossPercent}%)`;
+
+    // ===== 计算 Delta / 胜率推荐 =====
+    const riskRewardRatio = stopLossPercent / takeProfitPercent;
+    const requiredWinRate = (stopLossPercent / (takeProfitPercent + stopLossPercent)) * 100;
+    
+    // 更新盈亏比显示
+    riskRewardRatioEl.textContent = `1:${riskRewardRatio.toFixed(2)}`;
+    requiredWinRateEl.textContent = `${requiredWinRate.toFixed(1)}%`;
+    
+    // 根据所需胜率设置颜色
+    if (requiredWinRate > 80) {
+        requiredWinRateEl.style.color = 'var(--accent-red)'; // 红色 - 高风险
+    } else if (requiredWinRate > 70) {
+        requiredWinRateEl.style.color = 'var(--accent-orange)'; // 橙色 - 中等
+    } else {
+        requiredWinRateEl.style.color = 'var(--accent-green)'; // 绿色 - 安全
+    }
+    
+    // 获取 Delta 推荐
+    const recommendation = getDeltaRecommendation(requiredWinRate);
+    deltaRecommendationEl.textContent = recommendation.label;
+    deltaExplanationEl.textContent = `建议 Delta ${recommendation.label}（理论胜率 ~${recommendation.winRate}%），安全边际 ${recommendation.margin.toFixed(0)}%。${recommendation.desc}`;
+    
+    // 根据安全边际设置颜色
+    if (recommendation.margin >= 15) {
+        deltaRecommendationEl.style.color = 'var(--accent-green)'; // 绿色 - 充足
+    } else if (recommendation.margin >= 10) {
+        deltaRecommendationEl.style.color = 'var(--accent-orange)'; // 橙色 - 适中
+    } else {
+        deltaRecommendationEl.style.color = 'var(--accent-red)'; // 红色 - 不足
+    }
 }
 
 /**

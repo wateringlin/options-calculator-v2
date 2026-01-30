@@ -379,6 +379,116 @@ body {
     color: var(--text-primary);
 }
 
+/* ===== Delta Section ===== */
+.delta-section {
+    border: 1px solid rgba(255, 146, 43, 0.3);
+    background: linear-gradient(145deg, #2a1f14, #1a1510);
+}
+
+.delta-section .card-title {
+    color: var(--accent-orange);
+}
+
+.delta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.delta-item {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+}
+
+.delta-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.delta-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent-orange);
+}
+
+.delta-recommendation {
+    background: rgba(255, 146, 43, 0.1);
+    padding: 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 146, 43, 0.2);
+    margin-bottom: 12px;
+}
+
+.delta-rec-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.delta-rec-icon {
+    font-size: 1.2rem;
+}
+
+.delta-rec-title {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.delta-rec-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-green);
+    margin-bottom: 8px;
+}
+
+.delta-rec-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.delta-table {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-sm);
+}
+
+.delta-table-title {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.delta-table-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    text-align: center;
+    font-size: 0.7rem;
+}
+
+.delta-table-item {
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.delta-table-delta {
+    color: var(--accent-orange);
+    font-weight: 600;
+}
+
+.delta-table-rate {
+    color: var(--text-muted);
+}
+
 /* ===== Footer ===== */
 .footer {
     text-align: center;
