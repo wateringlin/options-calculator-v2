@@ -34,7 +34,7 @@ const requiredWinRateEl = document.getElementById('requiredWinRate');
 const deltaRecommendationEl = document.getElementById('deltaRecommendation');
 const deltaExplanationEl = document.getElementById('deltaExplanation');
 const expectedValueEl = document.getElementById('expectedValue');
-const comparisonTableBodyEl = document.getElementById('comparisonTableBody');
+const topStrategiesEl = document.getElementById('topStrategies');
 
 /**
  * 格式化价格显示
@@ -102,12 +102,12 @@ function getDeltaRecommendation(requiredWinRate) {
 }
 
 /**
- * 生成对照表 HTML
+ * 生成最佳策略推荐 HTML
  * @param {number} currentTP - 当前止盈百分比
  * @param {number} currentSL - 当前止损百分比
  * @returns {string} - HTML 字符串
  */
-function generateComparisonTable(currentTP, currentSL) {
+function generateTopStrategies(currentTP, currentSL) {
     const presets = [
         { tp: 50, sl: 50 },
         { tp: 50, sl: 100 },
@@ -119,35 +119,39 @@ function generateComparisonTable(currentTP, currentSL) {
         { tp: 100, sl: 200 }
     ];
     
+    // 计算所有策略的期望值
+    const strategies = presets.map(p => ({
+        tp: p.tp,
+        sl: p.sl,
+        ev: calculateExpectedValue(90, p.tp, p.sl),
+        ratio: p.sl / p.tp
+    }));
+    
+    // 按期望值从高到低排序
+    strategies.sort((a, b) => b.ev - a.ev);
+    
+    // 生成前3个最佳策略的 HTML
+    const medals = ['🥇', '🥈', '🥉'];
     let html = '';
-    for (const preset of presets) {
-        const { tp, sl } = preset;
-        const ratio = sl / tp;
-        const reqWinRate = (sl / (tp + sl)) * 100;
+    
+    for (let i = 0; i < 3 && i < strategies.length; i++) {
+        const s = strategies[i];
+        const isCurrent = (s.tp === currentTP && s.sl === currentSL);
+        const highlightClass = isCurrent ? 'top-strategy-item highlight' : 'top-strategy-item';
         
-        // 计算 Delta 0.10 (90% 胜率) 和 Delta 0.15 (85% 胜率) 的期望值
-        const ev010 = calculateExpectedValue(90, tp, sl);
-        const ev015 = calculateExpectedValue(85, tp, sl);
-        
-        const isCurrentRow = (tp === currentTP && sl === currentSL);
-        const rowClass = isCurrentRow ? 'highlight' : '';
-        
-        html += `<tr class="${rowClass}">`;
-        html += `<td style="color: var(--text-primary)">${tp}%/${sl}%</td>`;
-        html += `<td style="color: var(--text-secondary)">1:${ratio.toFixed(2)}</td>`;
-        html += `<td style="color: var(--accent-orange)">${reqWinRate.toFixed(0)}%</td>`;
-        
-        // Delta 0.10 期望值
-        const ev010Color = ev010 >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
-        const ev010Sign = ev010 >= 0 ? '+' : '';
-        html += `<td style="color: ${ev010Color}">${ev010Sign}${ev010.toFixed(0)}%</td>`;
-        
-        // Delta 0.15 期望值
-        const ev015Color = ev015 >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
-        const ev015Sign = ev015 >= 0 ? '+' : '';
-        html += `<td style="color: ${ev015Color}">${ev015Sign}${ev015.toFixed(0)}%</td>`;
-        
-        html += '</tr>';
+        html += `<div class="${highlightClass}">`;
+        html += `<div class="top-strategy-left">`;
+        html += `<span class="top-strategy-medal">${medals[i]}</span>`;
+        html += `<div class="top-strategy-info">`;
+        html += `<div class="top-strategy-name">止盈 ${s.tp}% / 止损 ${s.sl}%</div>`;
+        html += `<div class="top-strategy-ratio">盈亏比 1:${s.ratio.toFixed(2)}</div>`;
+        html += `</div>`;
+        html += `</div>`;
+        html += `<div class="top-strategy-right">`;
+        html += `<div class="top-strategy-ev">+${s.ev.toFixed(0)}%</div>`;
+        html += `<div class="top-strategy-label">期望值</div>`;
+        html += `</div>`;
+        html += `</div>`;
     }
     
     return html;
@@ -269,7 +273,7 @@ function calculate() {
     expectedValueEl.style.color = currentEV >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
     
     // ===== 生成对照表 =====
-    comparisonTableBodyEl.innerHTML = generateComparisonTable(takeProfitPercent, stopLossPercent);
+    topStrategiesEl.innerHTML = generateTopStrategies(takeProfitPercent, stopLossPercent);
 }
 
 /**

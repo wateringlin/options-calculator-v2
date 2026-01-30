@@ -198,27 +198,14 @@
                     </div>
                 </div>
 
-                <!-- 盈亏比与胜率对照表 -->
-                <div class="comparison-table-wrapper">
-                    <div class="comparison-table-title">📋 盈亏比 / 胜率 / 期望值对照表</div>
-                    <div class="table-scroll">
-                        <table class="comparison-table" id="comparisonTable">
-                            <thead>
-                                <tr>
-                                    <th>止盈/止损</th>
-                                    <th>盈亏比</th>
-                                    <th>需胜率</th>
-                                    <th>Δ0.10</th>
-                                    <th>Δ0.15</th>
-                                </tr>
-                            </thead>
-                            <tbody id="comparisonTableBody">
-                                <!-- 动态生成 -->
-                            </tbody>
-                        </table>
+                <!-- 🏆 最佳策略推荐 -->
+                <div class="top-strategies-wrapper">
+                    <div class="top-strategies-title">🏆 最佳策略推荐 (Delta 0.10, 胜率 90%)</div>
+                    <div id="topStrategies" class="top-strategies-list">
+                        <!-- 动态生成 -->
                     </div>
-                    <div class="comparison-table-note">
-                        💡 期望值 = 胜率×盈利 - 败率×亏损，绿色=正期望，红色=负期望
+                    <div class="top-strategies-note">
+                        � 基于 Delta 0.10 (90%胜率) 计算的期望值排名
                     </div>
                 </div>
 

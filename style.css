@@ -498,55 +498,84 @@ body {
     color: var(--accent-green);
 }
 
-/* Comparison Table */
-.comparison-table-wrapper {
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.2);
+/* Top Strategies */
+.top-strategies-wrapper {
+    padding: 10px;
+    background: linear-gradient(145deg, rgba(0, 214, 143, 0.15), rgba(0, 214, 143, 0.05));
     border-radius: var(--radius-sm);
-    margin-bottom: 12px;
+    border: 1px solid rgba(0, 214, 143, 0.3);
+    margin-bottom: 10px;
 }
 
-.comparison-table-title {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+.top-strategies-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--accent-green);
     margin-bottom: 8px;
 }
 
-.table-scroll {
-    overflow-x: auto;
+.top-strategies-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.comparison-table {
-    width: 100%;
-    font-size: 0.7rem;
-    border-collapse: collapse;
-    min-width: 320px;
+.top-strategy-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.comparison-table th {
-    padding: 8px 4px;
-    color: var(--text-secondary);
+.top-strategy-item.highlight {
+    background: rgba(255, 146, 43, 0.3);
+    border-color: var(--accent-orange);
+}
+
+.top-strategy-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.top-strategy-medal {
+    font-size: 1rem;
+}
+
+.top-strategy-name {
+    font-size: 0.8rem;
     font-weight: 600;
-    text-align: center;
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
 }
 
-.comparison-table td {
-    padding: 6px 4px;
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+.top-strategy-ratio {
+    font-size: 0.6rem;
+    color: var(--text-muted);
 }
 
-.comparison-table tr.highlight {
-    background: rgba(255, 146, 43, 0.2);
-    border: 2px solid var(--accent-orange);
+.top-strategy-right {
+    text-align: right;
 }
 
-.comparison-table-note {
-    font-size: 0.65rem;
+.top-strategy-ev {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent-green);
+}
+
+.top-strategy-label {
+    font-size: 0.55rem;
+    color: var(--text-muted);
+}
+
+.top-strategies-note {
+    font-size: 0.55rem;
     color: var(--text-muted);
     margin-top: 8px;
-    line-height: 1.4;
+    line-height: 1.3;
 }
 
 /* ===== Footer ===== */
