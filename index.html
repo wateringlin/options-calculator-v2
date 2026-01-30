@@ -167,25 +167,6 @@
                 </div>
             </section>
 
-            <!-- 策略概览 -->
-            <section class="card summary-section">
-                <h2 class="card-title">📋 策略概览</h2>
-                <div class="summary-grid">
-                    <div class="summary-item">
-                        <span class="summary-label">策略收入</span>
-                        <span class="summary-value" id="summaryCredit">$0.00</span>
-                    </div>
-                    <div class="summary-item profit">
-                        <span class="summary-label">止盈目标</span>
-                        <span class="summary-value" id="summaryProfit">+$0.00 (75%)</span>
-                    </div>
-                    <div class="summary-item loss">
-                        <span class="summary-label">止损限额</span>
-                        <span class="summary-value" id="summaryLoss">-$0.00 (200%)</span>
-                    </div>
-                </div>
-            </section>
-
             <!-- Delta/胜率推荐 -->
             <section class="card delta-section">
                 <h2 class="card-title">🎯 Delta / 胜率推荐</h2>
@@ -227,8 +208,8 @@
                                     <th>止盈/止损</th>
                                     <th>盈亏比</th>
                                     <th>需胜率</th>
-                                    <th>Delta 0.10</th>
-                                    <th>Delta 0.15</th>
+                                    <th>Δ0.10</th>
+                                    <th>Δ0.15</th>
                                 </tr>
                             </thead>
                             <tbody id="comparisonTableBody">
@@ -237,7 +218,7 @@
                         </table>
                     </div>
                     <div class="comparison-table-note">
-                        💡 期望值 = 胜率×盈利 - 败率×亏损，绿色表示正期望值，红色表示负期望值
+                        💡 期望值 = 胜率×盈利 - 败率×亏损，绿色=正期望，红色=负期望
                     </div>
                 </div>
 
@@ -265,6 +246,25 @@
                             <div class="delta-table-delta">0.05</div>
                             <div class="delta-table-rate">~95%</div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 策略概览 -->
+            <section class="card summary-section">
+                <h2 class="card-title">📋 策略概览</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">策略收入</span>
+                        <span class="summary-value" id="summaryCredit">$0.00</span>
+                    </div>
+                    <div class="summary-item profit">
+                        <span class="summary-label">止盈目标</span>
+                        <span class="summary-value" id="summaryProfit">+$0.00 (75%)</span>
+                    </div>
+                    <div class="summary-item loss">
+                        <span class="summary-label">止损限额</span>
+                        <span class="summary-value" id="summaryLoss">-$0.00 (200%)</span>
                     </div>
                 </div>
             </section>

@@ -29,7 +29,7 @@
 }
 
 html {
-    font-size: 16px;
+    font-size: 14px;
 }
 
 body {
@@ -45,20 +45,20 @@ body {
 .container {
     max-width: 480px;
     margin: 0 auto;
-    padding: 16px;
-    padding-bottom: 32px;
+    padding: 10px;
+    padding-bottom: 20px;
 }
 
 /* ===== Header ===== */
 .header {
     text-align: center;
-    padding: 24px 0 16px;
+    padding: 12px 0 8px;
 }
 
 .header h1 {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     background: linear-gradient(135deg, #fff, #a0a0ff);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -66,7 +66,7 @@ body {
 }
 
 .subtitle {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: var(--text-secondary);
 }
 
@@ -74,31 +74,31 @@ body {
 .card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    margin-bottom: 16px;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 10px;
     box-shadow: var(--shadow-sm);
 }
 
 .card-title {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-secondary);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .section-desc {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    margin-bottom: 16px;
+    margin-bottom: 10px;
 }
 
 /* ===== Input Section ===== */
 .input-group {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
 .input-item label {
