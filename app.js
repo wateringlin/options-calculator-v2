@@ -141,7 +141,7 @@ function generateTopStrategies(currentTP, currentSL) {
         const isCurrent = (s.tp === currentTP && s.sl === currentSL);
         const highlightClass = isCurrent ? 'top-strategy-item highlight' : 'top-strategy-item';
         
-        html += `<div class="${highlightClass}">`;
+        html += `<div class="${highlightClass}" style="cursor: pointer;" onclick="applyPreset(${s.tp}, ${s.sl})">`;
         html += `<div class="top-strategy-left">`;
         html += `<span class="top-strategy-medal">${medals[i]}</span>`;
         html += `<div class="top-strategy-info">`;
