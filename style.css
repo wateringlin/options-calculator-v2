@@ -629,6 +629,88 @@ body {
     line-height: 1.3;
 }
 
+/* ===== Position Sizing Section ===== */
+.position-section {
+    border: 1px solid rgba(92, 124, 250, 0.3);
+    background: linear-gradient(145deg, #1a1f2e, #14171f);
+}
+
+.position-section .card-title {
+    color: var(--accent-blue);
+}
+
+.position-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.position-item {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+}
+
+.position-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.position-value {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.position-value.highlight {
+    color: var(--accent-blue);
+    font-size: 1.3rem;
+}
+
+.position-value.profit {
+    color: var(--accent-green);
+}
+
+.position-value.loss {
+    color: var(--accent-red);
+}
+
+.position-note {
+    background: rgba(92, 124, 250, 0.1);
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(92, 124, 250, 0.2);
+}
+
+.note-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.note-item:last-child {
+    margin-bottom: 0;
+}
+
+.note-icon {
+    font-size: 0.9rem;
+}
+
+.note-text {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.note-text strong {
+    color: var(--accent-blue);
+}
+
 /* ===== Footer ===== */
 .footer {
     text-align: center;

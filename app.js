@@ -37,6 +37,15 @@ const expectedValueEl = document.getElementById('expectedValue');
 const topStrategiesEl = document.getElementById('topStrategies');
 const comparisonTableBodyEl = document.getElementById('comparisonTableBody');
 
+// Position Sizing Elements
+const totalCapitalInput = document.getElementById('totalCapital');
+const riskPercentInput = document.getElementById('riskPercent');
+const maxRiskAmountEl = document.getElementById('maxRiskAmount');
+const recommendedContractsEl = document.getElementById('recommendedContracts');
+const actualMaxLossEl = document.getElementById('actualMaxLoss');
+const potentialProfitEl = document.getElementById('potentialProfit');
+const kellyPercentEl = document.getElementById('kellyPercent');
+
 /**
  * 格式化价格显示
  * @param {number} value - 价格值
@@ -322,6 +331,49 @@ function calculate() {
     
     // ===== 生成对照表 =====
     comparisonTableBodyEl.innerHTML = generateComparisonTable(takeProfitPercent, stopLossPercent);
+    
+    // ===== 本金管理计算 =====
+    const totalCapital = parseFloat(totalCapitalInput?.value) || 50000;
+    const riskPercent = parseFloat(riskPercentInput?.value) || 2;
+    
+    // 单次最大风险金额
+    const maxRiskAmount = totalCapital * (riskPercent / 100);
+    
+    // 每份合约的最大亏损（基于止损金额，乘以100因为期权合约是100股）
+    const lossPerContract = lossAmount * 100;
+    
+    // 建议合约数
+    const recommendedContracts = lossPerContract > 0 ? Math.floor(maxRiskAmount / lossPerContract) : 0;
+    
+    // 实际最大亏损
+    const actualMaxLoss = recommendedContracts * lossPerContract;
+    
+    // 潜在收益
+    const potentialProfit = recommendedContracts * profitAmount * 100;
+    
+    // 凯利公式计算: f* = (bp - q) / b
+    // b = 赔率 (止盈/止损), p = 胜率, q = 败率
+    const b = takeProfitPercent / stopLossPercent;
+    const p = recommendation.winRate / 100;
+    const q = 1 - p;
+    const kellyPercent = Math.max(0, ((b * p - q) / b) * 100);
+    
+    // 更新显示
+    if (maxRiskAmountEl) {
+        maxRiskAmountEl.textContent = `$${maxRiskAmount.toLocaleString()}`;
+    }
+    if (recommendedContractsEl) {
+        recommendedContractsEl.textContent = `${recommendedContracts} 份`;
+    }
+    if (actualMaxLossEl) {
+        actualMaxLossEl.textContent = `-$${actualMaxLoss.toLocaleString()}`;
+    }
+    if (potentialProfitEl) {
+        potentialProfitEl.textContent = `+$${potentialProfit.toLocaleString()}`;
+    }
+    if (kellyPercentEl) {
+        kellyPercentEl.textContent = `${kellyPercent.toFixed(1)}%`;
+    }
 }
 
 /**
@@ -358,6 +410,14 @@ const debouncedCalculate = debounce(calculate, 100);
     input.addEventListener('input', debouncedCalculate);
     input.addEventListener('change', calculate);
 });
+
+// 本金管理输入框事件监听
+if (totalCapitalInput && riskPercentInput) {
+    [totalCapitalInput, riskPercentInput].forEach(input => {
+        input.addEventListener('input', debouncedCalculate);
+        input.addEventListener('change', calculate);
+    });
+}
 
 // 初始计算
 calculate();

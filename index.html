@@ -279,6 +279,59 @@
                 </div>
             </section>
 
+            <!-- 本金管理 -->
+            <section class="card position-section">
+                <h2 class="card-title">💰 本金管理</h2>
+                <p class="section-desc">根据风险管理最佳实践计算建议仓位</p>
+                
+                <div class="input-group">
+                    <div class="input-item">
+                        <label for="totalCapital">总本金</label>
+                        <div class="input-wrapper">
+                            <span class="prefix">$</span>
+                            <input type="number" id="totalCapital" value="50000" step="1000" min="0" inputmode="numeric">
+                        </div>
+                    </div>
+                    <div class="input-item">
+                        <label for="riskPercent">单次风险比例</label>
+                        <div class="input-wrapper small">
+                            <input type="number" id="riskPercent" value="2" step="0.5" min="0.5" max="10" inputmode="numeric">
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="position-grid">
+                    <div class="position-item">
+                        <span class="position-label">单次最大风险</span>
+                        <span class="position-value" id="maxRiskAmount">$1,000</span>
+                    </div>
+                    <div class="position-item">
+                        <span class="position-label">建议合约数</span>
+                        <span class="position-value highlight" id="recommendedContracts">5 份</span>
+                    </div>
+                    <div class="position-item">
+                        <span class="position-label">实际最大亏损</span>
+                        <span class="position-value loss" id="actualMaxLoss">$1,000</span>
+                    </div>
+                    <div class="position-item">
+                        <span class="position-label">潜在收益</span>
+                        <span class="position-value profit" id="potentialProfit">$375</span>
+                    </div>
+                </div>
+
+                <div class="position-note">
+                    <div class="note-item">
+                        <span class="note-icon">📊</span>
+                        <span class="note-text">凯利公式建议: <strong id="kellyPercent">4.5%</strong></span>
+                    </div>
+                    <div class="note-item">
+                        <span class="note-icon">⚠️</span>
+                        <span class="note-text">建议不超过凯利值的一半 (半凯利)</span>
+                    </div>
+                </div>
+            </section>
+
             <!-- 快速参考 -->
             <section class="card tips-section">
                 <h2 class="card-title">💡 富途设置提示</h2>
