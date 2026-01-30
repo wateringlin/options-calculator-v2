@@ -235,6 +235,29 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 盈亏比与胜率对照表 -->
+                <div class="comparison-table-wrapper">
+                    <div class="comparison-table-title">📋 盈亏比 / 胜率 / 期望值对照表</div>
+                    <div class="table-scroll">
+                        <table class="comparison-table" id="comparisonTable">
+                            <thead>
+                                <tr>
+                                    <th>止盈/止损</th>
+                                    <th>盈亏比</th>
+                                    <th>需胜率</th>
+                                    <th>期望值</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparisonTableBody">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="comparison-table-note">
+                        💡 期望值基于 Delta 0.10 (90%胜率) 计算
+                    </div>
+                </div>
             </section>
 
             <!-- 策略概览 -->

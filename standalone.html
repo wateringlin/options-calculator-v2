@@ -528,7 +528,7 @@ body {
                 </div>
 
                 <!-- Delta 与胜率对照表 -->
-                <div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                <div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 8px;">
                     <div style="font-size: 0.65rem; color: #6a6a80; margin-bottom: 6px;">🎲 Delta 与理论胜率</div>
                     <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; text-align: center; font-size: 0.6rem;">
                         <div style="padding: 3px; background: rgba(255,255,255,0.05); border-radius: 3px;">
@@ -551,6 +551,29 @@ body {
                             <div style="color: #ff922b; font-weight: 600;">0.05</div>
                             <div style="color: #6a6a80;">~95%</div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- 盈亏比与胜率对照表 -->
+                <div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                    <div style="font-size: 0.65rem; color: #6a6a80; margin-bottom: 6px;">📋 盈亏比 / 胜率 / 期望值对照表</div>
+                    <div style="overflow-x: auto;">
+                        <table id="comparisonTable" style="width: 100%; font-size: 0.6rem; border-collapse: collapse; min-width: 280px;">
+                            <thead>
+                                <tr style="background: rgba(255,255,255,0.05);">
+                                    <th style="padding: 5px 3px; color: #a0a0b8; font-weight: 600; text-align: center;">止盈/止损</th>
+                                    <th style="padding: 5px 3px; color: #a0a0b8; font-weight: 600; text-align: center;">盈亏比</th>
+                                    <th style="padding: 5px 3px; color: #a0a0b8; font-weight: 600; text-align: center;">需胜率</th>
+                                    <th style="padding: 5px 3px; color: #a0a0b8; font-weight: 600; text-align: center;">期望值</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparisonTableBody">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="font-size: 0.55rem; color: #6a6a80; margin-top: 6px; line-height: 1.3;">
+                        💡 期望值基于 Delta 0.10 (90%胜率) 计算
                     </div>
                 </div>
             </section>
@@ -614,6 +637,7 @@ var deltaRecommendationEl = document.getElementById('deltaRecommendation');
 var deltaExplanationEl = document.getElementById('deltaExplanation');
 var expectedValueEl = document.getElementById('expectedValue');
 var topStrategiesEl = document.getElementById('topStrategies');
+var comparisonTableBodyEl = document.getElementById('comparisonTableBody');
 
 // 格式化价格
 function formatPrice(value) {
@@ -724,6 +748,45 @@ function generateTopStrategies(currentTP, currentSL) {
     return html;
 }
 
+// 生成对照表
+function generateComparisonTable(currentTP, currentSL) {
+    var presets = [
+        { tp: 50, sl: 50 },
+        { tp: 50, sl: 100 },
+        { tp: 50, sl: 150 },
+        { tp: 75, sl: 100 },
+        { tp: 75, sl: 150 },
+        { tp: 75, sl: 200 },
+        { tp: 100, sl: 100 },
+        { tp: 100, sl: 200 }
+    ];
+    
+    var html = '';
+    for (var i = 0; i < presets.length; i++) {
+        var tp = presets[i].tp;
+        var sl = presets[i].sl;
+        var ratio = sl / tp;
+        var reqWinRate = (sl / (tp + sl)) * 100;
+        var ev = calculateExpectedValue(90, tp, sl); // Delta 0.10 = 90% 胜率
+        
+        var isCurrentRow = (tp === currentTP && sl === currentSL);
+        var rowBg = isCurrentRow ? 'rgba(255, 146, 43, 0.2)' : 'transparent';
+        var rowBorder = isCurrentRow ? '2px solid #ff922b' : '1px solid rgba(255,255,255,0.05)';
+        
+        var evColor = ev >= 0 ? '#00d68f' : '#ff4d6a';
+        var evSign = ev >= 0 ? '+' : '';
+        
+        html += '<tr style="background: ' + rowBg + '; border-bottom: ' + rowBorder + ';">';
+        html += '<td style="padding: 5px 3px; text-align: center; color: #fff;">' + tp + '%/' + sl + '%</td>';
+        html += '<td style="padding: 5px 3px; text-align: center; color: #a0a0b8;">1:' + ratio.toFixed(2) + '</td>';
+        html += '<td style="padding: 5px 3px; text-align: center; color: #ff922b;">' + reqWinRate.toFixed(0) + '%</td>';
+        html += '<td style="padding: 5px 3px; text-align: center; color: ' + evColor + ';">' + evSign + ev.toFixed(0) + '%</td>';
+        html += '</tr>';
+    }
+    
+    return html;
+}
+
 // 计算函数
 function calculate() {
     var sellPrice = parseFloat(sellPriceInput.value) || 0;
@@ -798,6 +861,9 @@ function calculate() {
     
     // 生成最佳策略推荐
     topStrategiesEl.innerHTML = generateTopStrategies(takeProfitPercent, stopLossPercent);
+    
+    // 生成对照表
+    comparisonTableBodyEl.innerHTML = generateComparisonTable(takeProfitPercent, stopLossPercent);
 }
 
 // 为每个输入框绑定多种事件以确保iOS兼容性
