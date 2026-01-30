@@ -489,6 +489,66 @@ body {
     color: var(--text-muted);
 }
 
+/* Delta grid triple column */
+.delta-grid.triple {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.expected-value {
+    color: var(--accent-green);
+}
+
+/* Comparison Table */
+.comparison-table-wrapper {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+}
+
+.comparison-table-title {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.table-scroll {
+    overflow-x: auto;
+}
+
+.comparison-table {
+    width: 100%;
+    font-size: 0.7rem;
+    border-collapse: collapse;
+    min-width: 320px;
+}
+
+.comparison-table th {
+    padding: 8px 4px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.comparison-table td {
+    padding: 6px 4px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.comparison-table tr.highlight {
+    background: rgba(255, 146, 43, 0.2);
+    border: 2px solid var(--accent-orange);
+}
+
+.comparison-table-note {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
 /* ===== Footer ===== */
 .footer {
     text-align: center;

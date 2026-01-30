@@ -191,14 +191,18 @@
                 <h2 class="card-title">🎯 Delta / 胜率推荐</h2>
                 <p class="section-desc">根据止盈止损比例，计算所需胜率并推荐 Delta 范围</p>
                 
-                <div class="delta-grid">
+                <div class="delta-grid triple">
                     <div class="delta-item">
                         <span class="delta-label">盈亏比</span>
                         <span class="delta-value" id="riskRewardRatio">1:2.67</span>
                     </div>
                     <div class="delta-item">
-                        <span class="delta-label">所需最低胜率</span>
+                        <span class="delta-label">所需胜率</span>
                         <span class="delta-value" id="requiredWinRate">72.7%</span>
+                    </div>
+                    <div class="delta-item">
+                        <span class="delta-label">期望值</span>
+                        <span class="delta-value expected-value" id="expectedValue">+0.0%</span>
                     </div>
                 </div>
 
@@ -213,8 +217,33 @@
                     </div>
                 </div>
 
+                <!-- 盈亏比与胜率对照表 -->
+                <div class="comparison-table-wrapper">
+                    <div class="comparison-table-title">📋 盈亏比 / 胜率 / 期望值对照表</div>
+                    <div class="table-scroll">
+                        <table class="comparison-table" id="comparisonTable">
+                            <thead>
+                                <tr>
+                                    <th>止盈/止损</th>
+                                    <th>盈亏比</th>
+                                    <th>需胜率</th>
+                                    <th>Delta 0.10</th>
+                                    <th>Delta 0.15</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparisonTableBody">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="comparison-table-note">
+                        💡 期望值 = 胜率×盈利 - 败率×亏损，绿色表示正期望值，红色表示负期望值
+                    </div>
+                </div>
+
+                <!-- Delta 与胜率对照表 -->
                 <div class="delta-table">
-                    <div class="delta-table-title">Delta 与胜率对照表</div>
+                    <div class="delta-table-title">🎲 Delta 与理论胜率</div>
                     <div class="delta-table-grid">
                         <div class="delta-table-item">
                             <div class="delta-table-delta">0.30</div>

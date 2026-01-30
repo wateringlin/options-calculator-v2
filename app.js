@@ -33,6 +33,8 @@ const riskRewardRatioEl = document.getElementById('riskRewardRatio');
 const requiredWinRateEl = document.getElementById('requiredWinRate');
 const deltaRecommendationEl = document.getElementById('deltaRecommendation');
 const deltaExplanationEl = document.getElementById('deltaExplanation');
+const expectedValueEl = document.getElementById('expectedValue');
+const comparisonTableBodyEl = document.getElementById('comparisonTableBody');
 
 /**
  * 格式化价格显示
@@ -44,6 +46,17 @@ function formatPrice(value) {
         return '$0.00';
     }
     return `$${value.toFixed(2)}`;
+}
+
+/**
+ * 计算期望值
+ * @param {number} winRate - 胜率（百分比）
+ * @param {number} profitPercent - 止盈百分比
+ * @param {number} lossPercent - 止损百分比
+ * @returns {number} - 期望值百分比
+ */
+function calculateExpectedValue(winRate, profitPercent, lossPercent) {
+    return (winRate / 100) * profitPercent - ((100 - winRate) / 100) * lossPercent;
 }
 
 /**
@@ -86,6 +99,58 @@ function getDeltaRecommendation(requiredWinRate) {
         margin: 95 - requiredWinRate,
         desc: '需要极高胜率，建议重新调整止盈止损比例'
     };
+}
+
+/**
+ * 生成对照表 HTML
+ * @param {number} currentTP - 当前止盈百分比
+ * @param {number} currentSL - 当前止损百分比
+ * @returns {string} - HTML 字符串
+ */
+function generateComparisonTable(currentTP, currentSL) {
+    const presets = [
+        { tp: 50, sl: 50 },
+        { tp: 50, sl: 100 },
+        { tp: 50, sl: 150 },
+        { tp: 75, sl: 100 },
+        { tp: 75, sl: 150 },
+        { tp: 75, sl: 200 },
+        { tp: 100, sl: 100 },
+        { tp: 100, sl: 200 }
+    ];
+    
+    let html = '';
+    for (const preset of presets) {
+        const { tp, sl } = preset;
+        const ratio = sl / tp;
+        const reqWinRate = (sl / (tp + sl)) * 100;
+        
+        // 计算 Delta 0.10 (90% 胜率) 和 Delta 0.15 (85% 胜率) 的期望值
+        const ev010 = calculateExpectedValue(90, tp, sl);
+        const ev015 = calculateExpectedValue(85, tp, sl);
+        
+        const isCurrentRow = (tp === currentTP && sl === currentSL);
+        const rowClass = isCurrentRow ? 'highlight' : '';
+        
+        html += `<tr class="${rowClass}">`;
+        html += `<td style="color: var(--text-primary)">${tp}%/${sl}%</td>`;
+        html += `<td style="color: var(--text-secondary)">1:${ratio.toFixed(2)}</td>`;
+        html += `<td style="color: var(--accent-orange)">${reqWinRate.toFixed(0)}%</td>`;
+        
+        // Delta 0.10 期望值
+        const ev010Color = ev010 >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        const ev010Sign = ev010 >= 0 ? '+' : '';
+        html += `<td style="color: ${ev010Color}">${ev010Sign}${ev010.toFixed(0)}%</td>`;
+        
+        // Delta 0.15 期望值
+        const ev015Color = ev015 >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        const ev015Sign = ev015 >= 0 ? '+' : '';
+        html += `<td style="color: ${ev015Color}">${ev015Sign}${ev015.toFixed(0)}%</td>`;
+        
+        html += '</tr>';
+    }
+    
+    return html;
 }
 
 /**
@@ -196,6 +261,15 @@ function calculate() {
     } else {
         deltaRecommendationEl.style.color = 'var(--accent-red)'; // 红色 - 不足
     }
+    
+    // ===== 计算期望值 =====
+    const currentEV = calculateExpectedValue(recommendation.winRate, takeProfitPercent, stopLossPercent);
+    const evSign = currentEV >= 0 ? '+' : '';
+    expectedValueEl.textContent = `${evSign}${currentEV.toFixed(1)}%`;
+    expectedValueEl.style.color = currentEV >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+    
+    // ===== 生成对照表 =====
+    comparisonTableBodyEl.innerHTML = generateComparisonTable(takeProfitPercent, stopLossPercent);
 }
 
 /**

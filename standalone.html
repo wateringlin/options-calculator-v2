@@ -506,18 +506,22 @@ body {
                 <h2 class="card-title" style="color: #ff922b;">🎯 Delta / 胜率推荐</h2>
                 <p class="section-desc">根据止盈止损比例，计算所需胜率并推荐 Delta 范围</p>
                 
-                <div class="delta-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                <div class="delta-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
                     <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; text-align: center;">
                         <span style="display: block; font-size: 0.75rem; color: #6a6a80; margin-bottom: 4px;">盈亏比</span>
                         <span id="riskRewardRatio" style="display: block; font-size: 1.25rem; font-weight: 700; color: #ff922b;">1:2.67</span>
                     </div>
                     <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; text-align: center;">
-                        <span style="display: block; font-size: 0.75rem; color: #6a6a80; margin-bottom: 4px;">所需最低胜率</span>
+                        <span style="display: block; font-size: 0.75rem; color: #6a6a80; margin-bottom: 4px;">所需胜率</span>
                         <span id="requiredWinRate" style="display: block; font-size: 1.25rem; font-weight: 700; color: #ff922b;">72.7%</span>
+                    </div>
+                    <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                        <span style="display: block; font-size: 0.75rem; color: #6a6a80; margin-bottom: 4px;">期望值</span>
+                        <span id="expectedValue" style="display: block; font-size: 1.25rem; font-weight: 700; color: #00d68f;">+$0.00</span>
                     </div>
                 </div>
 
-                <div class="delta-recommendation" style="background: rgba(255, 146, 43, 0.1); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 146, 43, 0.2);">
+                <div class="delta-recommendation" style="background: rgba(255, 146, 43, 0.1); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 146, 43, 0.2); margin-bottom: 12px;">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
                         <span style="font-size: 1.2rem;">📊</span>
                         <span style="font-weight: 600; color: #fff;">Short Leg Delta 建议</span>
@@ -530,8 +534,33 @@ body {
                     </div>
                 </div>
 
+                <!-- 盈亏比与胜率对照表 -->
                 <div style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                    <div style="font-size: 0.75rem; color: #6a6a80; margin-bottom: 8px;">Delta 与胜率对照表</div>
+                    <div style="font-size: 0.75rem; color: #6a6a80; margin-bottom: 8px;">📋 盈亏比 / 胜率 / 期望值对照表</div>
+                    <div style="overflow-x: auto;">
+                        <table id="comparisonTable" style="width: 100%; font-size: 0.7rem; border-collapse: collapse; min-width: 320px;">
+                            <thead>
+                                <tr style="background: rgba(255,255,255,0.05);">
+                                    <th style="padding: 8px 4px; color: #a0a0b8; font-weight: 600; text-align: center;">止盈/止损</th>
+                                    <th style="padding: 8px 4px; color: #a0a0b8; font-weight: 600; text-align: center;">盈亏比</th>
+                                    <th style="padding: 8px 4px; color: #a0a0b8; font-weight: 600; text-align: center;">需胜率</th>
+                                    <th style="padding: 8px 4px; color: #a0a0b8; font-weight: 600; text-align: center;">Delta 0.10</th>
+                                    <th style="padding: 8px 4px; color: #a0a0b8; font-weight: 600; text-align: center;">Delta 0.15</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparisonTableBody">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="font-size: 0.65rem; color: #6a6a80; margin-top: 8px; line-height: 1.4;">
+                        💡 期望值 = 胜率×盈利 - 败率×亏损，绿色表示正期望值，红色表示负期望值
+                    </div>
+                </div>
+
+                <!-- Delta 与胜率对照表 -->
+                <div style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                    <div style="font-size: 0.75rem; color: #6a6a80; margin-bottom: 8px;">🎲 Delta 与理论胜率</div>
                     <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; text-align: center; font-size: 0.7rem;">
                         <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
                             <div style="color: #ff922b; font-weight: 600;">0.30</div>
@@ -596,11 +625,20 @@ var riskRewardRatioEl = document.getElementById('riskRewardRatio');
 var requiredWinRateEl = document.getElementById('requiredWinRate');
 var deltaRecommendationEl = document.getElementById('deltaRecommendation');
 var deltaExplanationEl = document.getElementById('deltaExplanation');
+var expectedValueEl = document.getElementById('expectedValue');
+var comparisonTableBodyEl = document.getElementById('comparisonTableBody');
 
 // 格式化价格
 function formatPrice(value) {
     if (isNaN(value) || value === null || value < 0) return '$0.00';
     return '$' + value.toFixed(2);
+}
+
+// 计算期望值
+function calculateExpectedValue(winRate, profitPercent, lossPercent) {
+    // 期望值 = 胜率 × 盈利% - 败率 × 亏损%
+    var ev = (winRate / 100) * profitPercent - ((100 - winRate) / 100) * lossPercent;
+    return ev;
 }
 
 // Delta推荐函数
@@ -639,6 +677,55 @@ function getDeltaRecommendation(requiredWinRate) {
         margin: 95 - requiredWinRate,
         desc: '需要极高胜率，建议重新调整止盈止损比例'
     };
+}
+
+// 生成对照表
+function generateComparisonTable(currentTP, currentSL) {
+    var presets = [
+        { tp: 50, sl: 50 },
+        { tp: 50, sl: 100 },
+        { tp: 50, sl: 150 },
+        { tp: 75, sl: 100 },
+        { tp: 75, sl: 150 },
+        { tp: 75, sl: 200 },
+        { tp: 100, sl: 100 },
+        { tp: 100, sl: 200 }
+    ];
+    
+    var html = '';
+    for (var i = 0; i < presets.length; i++) {
+        var tp = presets[i].tp;
+        var sl = presets[i].sl;
+        var ratio = sl / tp;
+        var reqWinRate = (sl / (tp + sl)) * 100;
+        
+        // 计算 Delta 0.10 (90% 胜率) 和 Delta 0.15 (85% 胜率) 的期望值
+        var ev010 = calculateExpectedValue(90, tp, sl);
+        var ev015 = calculateExpectedValue(85, tp, sl);
+        
+        var isCurrentRow = (tp === currentTP && sl === currentSL);
+        var rowBg = isCurrentRow ? 'rgba(255, 146, 43, 0.2)' : 'transparent';
+        var rowBorder = isCurrentRow ? '2px solid #ff922b' : '1px solid rgba(255,255,255,0.05)';
+        
+        html += '<tr style="background: ' + rowBg + '; border-bottom: ' + rowBorder + ';">';
+        html += '<td style="padding: 6px 4px; text-align: center; color: #fff;">' + tp + '%/' + sl + '%</td>';
+        html += '<td style="padding: 6px 4px; text-align: center; color: #a0a0b8;">1:' + ratio.toFixed(2) + '</td>';
+        html += '<td style="padding: 6px 4px; text-align: center; color: #ff922b;">' + reqWinRate.toFixed(0) + '%</td>';
+        
+        // Delta 0.10 期望值
+        var ev010Color = ev010 >= 0 ? '#00d68f' : '#ff4d6a';
+        var ev010Sign = ev010 >= 0 ? '+' : '';
+        html += '<td style="padding: 6px 4px; text-align: center; color: ' + ev010Color + ';">' + ev010Sign + ev010.toFixed(0) + '%</td>';
+        
+        // Delta 0.15 期望值
+        var ev015Color = ev015 >= 0 ? '#00d68f' : '#ff4d6a';
+        var ev015Sign = ev015 >= 0 ? '+' : '';
+        html += '<td style="padding: 6px 4px; text-align: center; color: ' + ev015Color + ';">' + ev015Sign + ev015.toFixed(0) + '%</td>';
+        
+        html += '</tr>';
+    }
+    
+    return html;
 }
 
 // 计算函数
@@ -706,6 +793,15 @@ function calculate() {
     } else {
         deltaRecommendationEl.style.color = '#ff4d6a'; // 红色 - 不足
     }
+    
+    // 计算当前配置的期望值（使用推荐的 Delta 胜率）
+    var currentEV = calculateExpectedValue(recommendation.winRate, takeProfitPercent, stopLossPercent);
+    var evSign = currentEV >= 0 ? '+' : '';
+    expectedValueEl.textContent = evSign + currentEV.toFixed(1) + '%';
+    expectedValueEl.style.color = currentEV >= 0 ? '#00d68f' : '#ff4d6a';
+    
+    // 生成对照表
+    comparisonTableBodyEl.innerHTML = generateComparisonTable(takeProfitPercent, stopLossPercent);
 }
 
 // 为每个输入框绑定多种事件以确保iOS兼容性
