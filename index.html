@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>期权垂直价差计算器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📊 期权价差计算器</h1>
+            <p class="subtitle">Credit Spread 单腿止盈止损计算</p>
+        </header>
+
+        <main class="main">
+            <!-- 输入区域 -->
+            <section class="card input-section">
+                <h2 class="card-title">💰 开仓价格</h2>
+                <div class="input-group">
+                    <div class="input-item">
+                        <label for="sellPrice">卖出价 (Short Leg)</label>
+                        <div class="input-wrapper">
+                            <span class="currency">$</span>
+                            <input type="number" id="sellPrice" placeholder="0.67" step="0.01" min="0" inputmode="decimal">
+                        </div>
+                    </div>
+                    <div class="input-item">
+                        <label for="buyPrice">买入价 (Long Leg)</label>
+                        <div class="input-wrapper">
+                            <span class="currency">$</span>
+                            <input type="number" id="buyPrice" placeholder="0.17" step="0.01" min="0" inputmode="decimal">
+                        </div>
+                    </div>
+                </div>
+                <div class="net-credit">
+                    <span>净收入 (Net Credit)</span>
+                    <span class="net-credit-value" id="netCredit">$0.00</span>
+                </div>
+            </section>
+
+            <!-- 止盈止损比例设置 -->
+            <section class="card settings-section">
+                <h2 class="card-title">⚙️ 止盈止损比例</h2>
+                <div class="settings-group">
+                    <div class="setting-item">
+                        <label for="takeProfitPercent">止盈比例</label>
+                        <div class="input-wrapper small">
+                            <input type="number" id="takeProfitPercent" value="75" step="5" min="0" max="100" inputmode="numeric">
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="stopLossPercent">止损比例</label>
+                        <div class="input-wrapper small">
+                            <input type="number" id="stopLossPercent" value="200" step="10" min="0" inputmode="numeric">
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Short Leg 设置 -->
+            <section class="card leg-section short-leg-section">
+                <h2 class="card-title">🔴 Short Leg 富途设置</h2>
+                <p class="section-desc">卖出的期权，需要买回平仓</p>
+                
+                <div class="futu-settings">
+                    <div class="futu-setting profit">
+                        <div class="futu-header">
+                            <span class="futu-icon">✅</span>
+                            <span class="futu-label">止盈单</span>
+                            <span class="futu-badge profit-badge" id="shortProfitBadge">盈利 $0.00</span>
+                        </div>
+                        <div class="futu-body">
+                            <div class="futu-row">
+                                <span class="futu-key">条件类型</span>
+                                <span class="futu-val">价格 ≤ 触发价</span>
+                            </div>
+                            <div class="futu-row highlight">
+                                <span class="futu-key">触发价格</span>
+                                <span class="futu-val futu-price" id="shortTpPrice">$0.00</span>
+                            </div>
+                            <div class="futu-row">
+                                <span class="futu-key">订单类型</span>
+                                <span class="futu-val">市价买入</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="futu-setting loss">
+                        <div class="futu-header">
+                            <span class="futu-icon">🛑</span>
+                            <span class="futu-label">止损单</span>
+                            <span class="futu-badge loss-badge" id="shortLossBadge">亏损 $0.00</span>
+                        </div>
+                        <div class="futu-body">
+                            <div class="futu-row">
+                                <span class="futu-key">条件类型</span>
+                                <span class="futu-val">价格 ≥ 触发价</span>
+                            </div>
+                            <div class="futu-row highlight">
+                                <span class="futu-key">触发价格</span>
+                                <span class="futu-val futu-price" id="shortSlPrice">$0.00</span>
+                            </div>
+                            <div class="futu-row">
+                                <span class="futu-key">订单类型</span>
+                                <span class="futu-val">市价买入</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Long Leg 设置 -->
+            <section class="card leg-section long-leg-section">
+                <h2 class="card-title">🟢 Long Leg 富途设置</h2>
+                <p class="section-desc">买入的期权，需要卖出平仓</p>
+                
+                <div class="futu-settings">
+                    <div class="futu-setting profit">
+                        <div class="futu-header">
+                            <span class="futu-icon">✅</span>
+                            <span class="futu-label">止盈单</span>
+                            <span class="futu-badge muted-badge">配合Short平仓</span>
+                        </div>
+                        <div class="futu-body">
+                            <div class="futu-row">
+                                <span class="futu-key">条件类型</span>
+                                <span class="futu-val">价格 ≤ 触发价</span>
+                            </div>
+                            <div class="futu-row highlight">
+                                <span class="futu-key">触发价格</span>
+                                <span class="futu-val futu-price" id="longTpPrice">$0.01</span>
+                            </div>
+                            <div class="futu-row">
+                                <span class="futu-key">订单类型</span>
+                                <span class="futu-val">市价卖出</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="futu-setting loss">
+                        <div class="futu-header">
+                            <span class="futu-icon">🛑</span>
+                            <span class="futu-label">止损单</span>
+                            <span class="futu-badge muted-badge">配合Short平仓</span>
+                        </div>
+                        <div class="futu-body">
+                            <div class="futu-row">
+                                <span class="futu-key">条件类型</span>
+                                <span class="futu-val">价格 ≥ 触发价</span>
+                            </div>
+                            <div class="futu-row highlight">
+                                <span class="futu-key">触发价格</span>
+                                <span class="futu-val futu-price" id="longSlPrice">$0.00</span>
+                            </div>
+                            <div class="futu-row">
+                                <span class="futu-key">订单类型</span>
+                                <span class="futu-val">市价卖出</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 策略概览 -->
+            <section class="card summary-section">
+                <h2 class="card-title">📋 策略概览</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">策略收入</span>
+                        <span class="summary-value" id="summaryCredit">$0.00</span>
+                    </div>
+                    <div class="summary-item profit">
+                        <span class="summary-label">止盈目标</span>
+                        <span class="summary-value" id="summaryProfit">+$0.00 (75%)</span>
+                    </div>
+                    <div class="summary-item loss">
+                        <span class="summary-label">止损限额</span>
+                        <span class="summary-value" id="summaryLoss">-$0.00 (200%)</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 快速参考 -->
+            <section class="card tips-section">
+                <h2 class="card-title">💡 富途设置提示</h2>
+                <div class="tips-content">
+                    <p>1. <strong>优先设置 Short Leg</strong>，这是主要风险来源</p>
+                    <p>2. Long Leg 可选设置，主要用于同步平仓</p>
+                    <p>3. 条件单选择 <strong>"到价触发"</strong> 类型</p>
+                    <p>4. 收盘前 15 分钟建议手动平仓</p>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>0DTE Credit Spread Calculator</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
