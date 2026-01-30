@@ -32,7 +32,7 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { font-size: 16px; }
+html { font-size: 14px; }
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -46,19 +46,19 @@ body {
 .container {
     max-width: 480px;
     margin: 0 auto;
-    padding: 16px;
-    padding-bottom: 32px;
+    padding: 10px;
+    padding-bottom: 20px;
 }
 
 .header {
     text-align: center;
-    padding: 24px 0 16px;
+    padding: 12px 0 8px;
 }
 
 .header h1 {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     background: linear-gradient(135deg, #fff, #a0a0ff);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -66,30 +66,30 @@ body {
 }
 
 .subtitle {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: var(--text-secondary);
 }
 
 .card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    margin-bottom: 16px;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 10px;
     box-shadow: var(--shadow-sm);
 }
 
 .card-title {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-secondary);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .section-desc {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    margin-bottom: 16px;
+    margin-bottom: 10px;
 }
 
 .input-group {
@@ -484,6 +484,90 @@ body {
                 </div>
             </section>
 
+            <section class="card delta-section" style="border: 1px solid rgba(255, 146, 43, 0.3); background: linear-gradient(145deg, #2a1f14, #1a1510);">
+                <h2 class="card-title" style="color: #ff922b;">🎯 Delta / 胜率推荐</h2>
+                <p class="section-desc">根据止盈止损比例，计算所需胜率并推荐 Delta 范围</p>
+                
+                <div class="delta-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+                    <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                        <span style="display: block; font-size: 0.65rem; color: #6a6a80; margin-bottom: 2px;">盈亏比</span>
+                        <span id="riskRewardRatio" style="display: block; font-size: 1.1rem; font-weight: 700; color: #ff922b;">1:2.67</span>
+                    </div>
+                    <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                        <span style="display: block; font-size: 0.65rem; color: #6a6a80; margin-bottom: 2px;">所需胜率</span>
+                        <span id="requiredWinRate" style="display: block; font-size: 1.1rem; font-weight: 700; color: #ff922b;">72.7%</span>
+                    </div>
+                    <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                        <span style="display: block; font-size: 0.65rem; color: #6a6a80; margin-bottom: 2px;">期望值</span>
+                        <span id="expectedValue" style="display: block; font-size: 1.1rem; font-weight: 700; color: #00d68f;">+0.0%</span>
+                    </div>
+                </div>
+
+                <div class="delta-recommendation" style="background: rgba(255, 146, 43, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 146, 43, 0.2); margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                        <span style="font-size: 1rem;">📊</span>
+                        <span style="font-weight: 600; font-size: 0.85rem; color: #fff;">Short Leg Delta 建议</span>
+                    </div>
+                    <div id="deltaRecommendation" style="font-size: 1.2rem; font-weight: 700; color: #00d68f; margin-bottom: 4px;">
+                        ≤ 0.15
+                    </div>
+                    <div id="deltaExplanation" style="font-size: 0.7rem; color: #a0a0b8; line-height: 1.5;">
+                        建议选择 Delta ≤ 0.15 的期权（理论胜率 ~85%），给予约 12% 的安全边际
+                    </div>
+                </div>
+
+                <!-- 盈亏比与胜率对照表 -->
+                <div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 8px;">
+                    <div style="font-size: 0.65rem; color: #6a6a80; margin-bottom: 6px;">📋 盈亏比 / 胜率 / 期望值对照表</div>
+                    <div style="overflow-x: auto;">
+                        <table id="comparisonTable" style="width: 100%; font-size: 0.6rem; border-collapse: collapse; min-width: 300px;">
+                            <thead>
+                                <tr style="background: rgba(255,255,255,0.05);">
+                                    <th style="padding: 5px 3px; color: #a0a0b8; font-weight: 600; text-align: center;">止盈/止损</th>
+                                    <th style="padding: 5px 3px; color: #a0a0b8; font-weight: 600; text-align: center;">盈亏比</th>
+                                    <th style="padding: 5px 3px; color: #a0a0b8; font-weight: 600; text-align: center;">需胜率</th>
+                                    <th style="padding: 5px 3px; color: #a0a0b8; font-weight: 600; text-align: center;">Δ0.10</th>
+                                    <th style="padding: 5px 3px; color: #a0a0b8; font-weight: 600; text-align: center;">Δ0.15</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparisonTableBody">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="font-size: 0.55rem; color: #6a6a80; margin-top: 6px; line-height: 1.3;">
+                        💡 期望值 = 胜率×盈利 - 败率×亏损，绿色=正期望，红色=负期望
+                    </div>
+                </div>
+
+                <!-- Delta 与胜率对照表 -->
+                <div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                    <div style="font-size: 0.65rem; color: #6a6a80; margin-bottom: 6px;">🎲 Delta 与理论胜率</div>
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; text-align: center; font-size: 0.6rem;">
+                        <div style="padding: 3px; background: rgba(255,255,255,0.05); border-radius: 3px;">
+                            <div style="color: #ff922b; font-weight: 600;">0.30</div>
+                            <div style="color: #6a6a80;">~70%</div>
+                        </div>
+                        <div style="padding: 3px; background: rgba(255,255,255,0.05); border-radius: 3px;">
+                            <div style="color: #ff922b; font-weight: 600;">0.20</div>
+                            <div style="color: #6a6a80;">~80%</div>
+                        </div>
+                        <div style="padding: 3px; background: rgba(255,255,255,0.05); border-radius: 3px;">
+                            <div style="color: #ff922b; font-weight: 600;">0.15</div>
+                            <div style="color: #6a6a80;">~85%</div>
+                        </div>
+                        <div style="padding: 3px; background: rgba(255,255,255,0.05); border-radius: 3px;">
+                            <div style="color: #ff922b; font-weight: 600;">0.10</div>
+                            <div style="color: #6a6a80;">~90%</div>
+                        </div>
+                        <div style="padding: 3px; background: rgba(255,255,255,0.05); border-radius: 3px;">
+                            <div style="color: #ff922b; font-weight: 600;">0.05</div>
+                            <div style="color: #6a6a80;">~95%</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section class="card summary-section">
                 <h2 class="card-title">📋 策略概览</h2>
                 <div class="summary-grid">
@@ -498,90 +582,6 @@ body {
                     <div class="summary-item loss">
                         <span class="summary-label">止损限额</span>
                         <span class="summary-value" id="summaryLoss">-$0.00 (200%)</span>
-                    </div>
-                </div>
-            </section>
-
-            <section class="card delta-section" style="border: 1px solid rgba(255, 146, 43, 0.3); background: linear-gradient(145deg, #2a1f14, #1a1510);">
-                <h2 class="card-title" style="color: #ff922b;">🎯 Delta / 胜率推荐</h2>
-                <p class="section-desc">根据止盈止损比例，计算所需胜率并推荐 Delta 范围</p>
-                
-                <div class="delta-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-                    <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; text-align: center;">
-                        <span style="display: block; font-size: 0.75rem; color: #6a6a80; margin-bottom: 4px;">盈亏比</span>
-                        <span id="riskRewardRatio" style="display: block; font-size: 1.25rem; font-weight: 700; color: #ff922b;">1:2.67</span>
-                    </div>
-                    <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; text-align: center;">
-                        <span style="display: block; font-size: 0.75rem; color: #6a6a80; margin-bottom: 4px;">所需胜率</span>
-                        <span id="requiredWinRate" style="display: block; font-size: 1.25rem; font-weight: 700; color: #ff922b;">72.7%</span>
-                    </div>
-                    <div class="delta-item" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; text-align: center;">
-                        <span style="display: block; font-size: 0.75rem; color: #6a6a80; margin-bottom: 4px;">期望值</span>
-                        <span id="expectedValue" style="display: block; font-size: 1.25rem; font-weight: 700; color: #00d68f;">+$0.00</span>
-                    </div>
-                </div>
-
-                <div class="delta-recommendation" style="background: rgba(255, 146, 43, 0.1); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 146, 43, 0.2); margin-bottom: 12px;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                        <span style="font-size: 1.2rem;">📊</span>
-                        <span style="font-weight: 600; color: #fff;">Short Leg Delta 建议</span>
-                    </div>
-                    <div id="deltaRecommendation" style="font-size: 1.5rem; font-weight: 700; color: #00d68f; margin-bottom: 8px;">
-                        ≤ 0.15
-                    </div>
-                    <div id="deltaExplanation" style="font-size: 0.8rem; color: #a0a0b8; line-height: 1.6;">
-                        建议选择 Delta ≤ 0.15 的期权（理论胜率 ~85%），给予约 12% 的安全边际
-                    </div>
-                </div>
-
-                <!-- 盈亏比与胜率对照表 -->
-                <div style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                    <div style="font-size: 0.75rem; color: #6a6a80; margin-bottom: 8px;">📋 盈亏比 / 胜率 / 期望值对照表</div>
-                    <div style="overflow-x: auto;">
-                        <table id="comparisonTable" style="width: 100%; font-size: 0.7rem; border-collapse: collapse; min-width: 320px;">
-                            <thead>
-                                <tr style="background: rgba(255,255,255,0.05);">
-                                    <th style="padding: 8px 4px; color: #a0a0b8; font-weight: 600; text-align: center;">止盈/止损</th>
-                                    <th style="padding: 8px 4px; color: #a0a0b8; font-weight: 600; text-align: center;">盈亏比</th>
-                                    <th style="padding: 8px 4px; color: #a0a0b8; font-weight: 600; text-align: center;">需胜率</th>
-                                    <th style="padding: 8px 4px; color: #a0a0b8; font-weight: 600; text-align: center;">Delta 0.10</th>
-                                    <th style="padding: 8px 4px; color: #a0a0b8; font-weight: 600; text-align: center;">Delta 0.15</th>
-                                </tr>
-                            </thead>
-                            <tbody id="comparisonTableBody">
-                                <!-- 动态生成 -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="font-size: 0.65rem; color: #6a6a80; margin-top: 8px; line-height: 1.4;">
-                        💡 期望值 = 胜率×盈利 - 败率×亏损，绿色表示正期望值，红色表示负期望值
-                    </div>
-                </div>
-
-                <!-- Delta 与胜率对照表 -->
-                <div style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                    <div style="font-size: 0.75rem; color: #6a6a80; margin-bottom: 8px;">🎲 Delta 与理论胜率</div>
-                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; text-align: center; font-size: 0.7rem;">
-                        <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                            <div style="color: #ff922b; font-weight: 600;">0.30</div>
-                            <div style="color: #6a6a80;">~70%</div>
-                        </div>
-                        <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                            <div style="color: #ff922b; font-weight: 600;">0.20</div>
-                            <div style="color: #6a6a80;">~80%</div>
-                        </div>
-                        <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                            <div style="color: #ff922b; font-weight: 600;">0.15</div>
-                            <div style="color: #6a6a80;">~85%</div>
-                        </div>
-                        <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                            <div style="color: #ff922b; font-weight: 600;">0.10</div>
-                            <div style="color: #6a6a80;">~90%</div>
-                        </div>
-                        <div style="padding: 4px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                            <div style="color: #ff922b; font-weight: 600;">0.05</div>
-                            <div style="color: #6a6a80;">~95%</div>
-                        </div>
                     </div>
                 </div>
             </section>
