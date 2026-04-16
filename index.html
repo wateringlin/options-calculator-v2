@@ -13,10 +13,78 @@
     <div class="container">
         <header class="header">
             <h1>📊 期权价差计算器</h1>
-            <p class="subtitle">Credit Spread 单腿止盈止损计算</p>
+            <p class="subtitle">Credit Spread 单腿止盈止损计算 | 反马丁风控版</p>
         </header>
 
         <main class="main">
+            <!-- 🚨 风险状态面板 - 最重要，放在最上面 -->
+            <section class="card risk-status-section">
+                <h2 class="card-title">🚨 今日风险状态</h2>
+                <div class="risk-status-grid">
+                    <div class="risk-status-item">
+                        <span class="risk-label">当前本金</span>
+                        <span class="risk-value" id="currentCapital">$50,000</span>
+                    </div>
+                    <div class="risk-status-item">
+                        <span class="risk-label">今日盈亏</span>
+                        <span class="risk-value" id="todayPnL">$0</span>
+                    </div>
+                    <div class="risk-status-item">
+                        <span class="risk-label">今日已用风险</span>
+                        <span class="risk-value" id="todayRiskUsed">0%</span>
+                    </div>
+                    <div class="risk-status-item">
+                        <span class="risk-label">连续亏损</span>
+                        <span class="risk-value" id="consecutiveLosses">0 次</span>
+                    </div>
+                </div>
+                <div class="risk-alert" id="riskAlert" style="display: none;">
+                    <span class="risk-alert-icon">⚠️</span>
+                    <span class="risk-alert-text" id="riskAlertText">风险警告</span>
+                </div>
+                <div class="trading-status" id="tradingStatus">
+                    <span class="trading-status-dot green"></span>
+                    <span class="trading-status-text">可以开仓</span>
+                </div>
+            </section>
+
+            <!-- 开仓检查清单 -->
+            <section class="card checklist-section">
+                <h2 class="card-title">✅ 开仓检查清单</h2>
+                <p class="section-desc">开仓前必须全部勾选，防止冲动交易</p>
+                <div class="checklist">
+                    <label class="checklist-item">
+                        <input type="checkbox" id="check1" class="checklist-checkbox">
+                        <span class="checkmark"></span>
+                        <span class="checklist-text">已检查大盘趋势，无重大利空</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox" id="check2" class="checklist-checkbox">
+                        <span class="checkmark"></span>
+                        <span class="checklist-text">标的无财报/重大事件，IV 不在异常高位</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox" id="check3" class="checklist-checkbox">
+                        <span class="checkmark"></span>
+                        <span class="checklist-text">Delta ≤ 0.15，距离到期 ≥ 3 天 或 0DTE</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox" id="check4" class="checklist-checkbox">
+                        <span class="checkmark"></span>
+                        <span class="checklist-text">今日风险额度充足，心态平稳</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox" id="check5" class="checklist-checkbox">
+                        <span class="checkmark"></span>
+                        <span class="checklist-text">已设置止损单，不会死扛</span>
+                    </label>
+                </div>
+                <div class="checklist-result" id="checklistResult">
+                    <span class="checklist-icon">🔴</span>
+                    <span class="checklist-status">请完成所有检查项</span>
+                </div>
+            </section>
+
             <!-- 输入区域 -->
             <section class="card input-section">
                 <h2 class="card-title">💰 开仓价格</h2>
@@ -279,10 +347,10 @@
                 </div>
             </section>
 
-            <!-- 本金管理 -->
+            <!-- 本金管理 - 反马丁策略 -->
             <section class="card position-section">
-                <h2 class="card-title">💰 本金管理</h2>
-                <p class="section-desc">根据风险管理最佳实践计算建议仓位</p>
+                <h2 class="card-title">💰 反马丁仓位管理</h2>
+                <p class="section-desc">亏损减仓、盈利恢复，保护本金优先</p>
                 
                 <div class="input-group">
                     <div class="input-item">
@@ -293,42 +361,155 @@
                         </div>
                     </div>
                     <div class="input-item">
-                        <label for="riskPercent">单次风险比例</label>
+                        <label for="riskPercent">基础风险比例</label>
                         <div class="input-wrapper small">
-                            <input type="number" id="riskPercent" value="2" step="0.5" min="0.5" max="10" inputmode="numeric">
+                            <input type="number" id="riskPercent" value="2" step="0.5" min="0.5" max="5" inputmode="numeric">
                             <span class="unit">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <div class="input-item">
+                        <label for="dailyMaxLoss">每日最大亏损</label>
+                        <div class="input-wrapper small">
+                            <input type="number" id="dailyMaxLoss" value="3" step="0.5" min="1" max="10" inputmode="numeric">
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+                    <div class="input-item">
+                        <label for="weeklyMaxLoss">每周最大亏损</label>
+                        <div class="input-wrapper small">
+                            <input type="number" id="weeklyMaxLoss" value="6" step="1" min="2" max="20" inputmode="numeric">
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 反马丁策略说明 -->
+                <div class="anti-martin-box">
+                    <div class="anti-martin-title">📉 反马丁仓位调整规则</div>
+                    <div class="anti-martin-rules">
+                        <div class="rule-item">
+                            <span class="rule-condition">连亏 1 次</span>
+                            <span class="rule-action">→ 下次开仓 <strong>75%</strong></span>
+                        </div>
+                        <div class="rule-item">
+                            <span class="rule-condition">连亏 2 次</span>
+                            <span class="rule-action">→ 下次开仓 <strong>50%</strong></span>
+                        </div>
+                        <div class="rule-item">
+                            <span class="rule-condition">连亏 3 次</span>
+                            <span class="rule-action">→ <strong class="stop-trading">停止交易，休息一天</strong></span>
+                        </div>
+                        <div class="rule-item success">
+                            <span class="rule-condition">盈利 1 次</span>
+                            <span class="rule-action">→ 恢复到 <strong>100%</strong> 仓位</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="position-grid">
                     <div class="position-item">
-                        <span class="position-label">单次最大风险</span>
-                        <span class="position-value" id="maxRiskAmount">$1,000</span>
+                        <span class="position-label">基础风险额度</span>
+                        <span class="position-value" id="baseRiskAmount">$1,000</span>
+                    </div>
+                    <div class="position-item">
+                        <span class="position-label">当前仓位系数</span>
+                        <span class="position-value highlight" id="currentPositionMultiplier">100%</span>
+                    </div>
+                    <div class="position-item">
+                        <span class="position-label">调整后风险额度</span>
+                        <span class="position-value" id="adjustedRiskAmount">$1,000</span>
                     </div>
                     <div class="position-item">
                         <span class="position-label">建议合约数</span>
                         <span class="position-value highlight" id="recommendedContracts">5 份</span>
                     </div>
+                </div>
+
+                <div class="position-grid">
                     <div class="position-item">
                         <span class="position-label">实际最大亏损</span>
-                        <span class="position-value loss" id="actualMaxLoss">$1,000</span>
+                        <span class="position-value loss" id="actualMaxLoss">-$1,000</span>
                     </div>
                     <div class="position-item">
                         <span class="position-label">潜在收益</span>
-                        <span class="position-value profit" id="potentialProfit">$375</span>
+                        <span class="position-value profit" id="potentialProfit">+$375</span>
+                    </div>
+                    <div class="position-item">
+                        <span class="position-label">今日剩余额度</span>
+                        <span class="position-value" id="remainingDailyRisk">$1,500</span>
+                    </div>
+                    <div class="position-item">
+                        <span class="position-label">凯利公式建议</span>
+                        <span class="position-value" id="kellyPercent">4.5%</span>
                     </div>
                 </div>
 
                 <div class="position-note">
+                    <div class="note-item warning">
+                        <span class="note-icon">⚠️</span>
+                        <span class="note-text"><strong>核心原则：</strong>亏损时减仓，不是加仓！马丁策略是爆仓之路</span>
+                    </div>
                     <div class="note-item">
                         <span class="note-icon">📊</span>
-                        <span class="note-text">凯利公式建议: <strong id="kellyPercent">4.5%</strong></span>
+                        <span class="note-text">建议使用半凯利（凯利值的50%），降低波动</span>
                     </div>
-                    <div class="note-item">
-                        <span class="note-icon">⚠️</span>
-                        <span class="note-text">建议不超过凯利值的一半 (半凯利)</span>
+                </div>
+            </section>
+
+            <!-- 交易记录 -->
+            <section class="card trade-history-section">
+                <h2 class="card-title">📝 交易记录</h2>
+                <p class="section-desc">记录每笔交易，追踪真实表现</p>
+                
+                <div class="trade-input-group">
+                    <div class="input-item">
+                        <label for="tradeSymbol">标的</label>
+                        <input type="text" id="tradeSymbol" placeholder="SPY/QQQ" class="trade-input">
                     </div>
+                    <div class="input-item">
+                        <label for="tradeContracts">合约数</label>
+                        <input type="number" id="tradeContracts" placeholder="5" min="1" class="trade-input">
+                    </div>
+                    <div class="input-item">
+                        <label for="tradePnL">盈亏($)</label>
+                        <input type="number" id="tradePnL" placeholder="-200" step="1" class="trade-input">
+                    </div>
+                </div>
+                
+                <div class="trade-buttons">
+                    <button class="btn btn-profit" onclick="recordTrade('profit')">✅ 记录盈利</button>
+                    <button class="btn btn-loss" onclick="recordTrade('loss')">❌ 记录亏损</button>
+                </div>
+
+                <div class="trade-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">总交易</span>
+                        <span class="stat-value" id="totalTrades">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">胜率</span>
+                        <span class="stat-value" id="actualWinRate">0%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">总盈亏</span>
+                        <span class="stat-value" id="totalPnL">$0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">最大回撤</span>
+                        <span class="stat-value" id="maxDrawdown">$0</span>
+                    </div>
+                </div>
+
+                <div class="trade-history-list" id="tradeHistoryList">
+                    <div class="trade-history-empty">暂无交易记录</div>
+                </div>
+
+                <div class="trade-actions">
+                    <button class="btn btn-secondary" onclick="clearTrades()">🗑️ 清空记录</button>
+                    <button class="btn btn-secondary" onclick="exportTrades()">📤 导出 CSV</button>
                 </div>
             </section>
 

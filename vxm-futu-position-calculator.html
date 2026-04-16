@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1117" />
+  <title>VXM 富途下单张数计算器 · 策略对齐</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --orange: #d29922;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      padding: 20px 16px 48px;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 16px;
+      margin-bottom: 14px;
+    }
+    .card h2 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d1117;
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: 12px;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .row2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .result-big {
+      font-size: 2.25rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--green);
+      margin: 8px 0 4px;
+    }
+    .result-line {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      margin-top: 12px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .btn:active { opacity: 0.88; }
+    .note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      border-left: 3px solid var(--orange);
+      padding-left: 12px;
+      margin-top: 12px;
+    }
+    details {
+      margin-top: 8px;
+    }
+    details summary {
+      cursor: pointer;
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+    pre {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      color: var(--text);
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>VXM 富途 · 下单张数</h1>
+  <p class="sub">与 Pine 策略 <code>entry_qty_vxm()</code> 同一套公式：10% 权益为单笔保证金预算 ÷ 每张保证金，且总占用 ≤ 权益 × 最大比例。填好后得到「本笔可下张数」。</p>
+
+  <div class="card">
+    <h2>参数（与策略脚本常数对齐）</h2>
+    <label for="equity">当前账户权益 equity（USD）</label>
+    <input type="number" id="equity" value="100000" min="0" step="100" />
+    <div class="row2">
+      <div>
+        <label for="margin">每张初始保证金 MARGIN_PER_CONTRACT（USD）</label>
+        <input type="number" id="margin" value="1300" min="1" step="10" />
+      </div>
+      <div>
+        <label for="slice">单笔占权益比例 SLICE_EQUITY_PCT（%）</label>
+        <input type="number" id="slice" value="10" min="0.1" step="0.1" />
+      </div>
+    </div>
+    <div class="row2">
+      <div>
+        <label for="maxUsage">总保证金上限 MAX_MARGIN_USAGE（小数，如 0.6 = 60%）</label>
+        <input type="number" id="maxUsage" value="0.6" min="0.01" max="1" step="0.05" />
+      </div>
+      <div>
+        <label for="position">当前已持有张数（含多正空负，填绝对值）</label>
+        <input type="number" id="position" value="0" min="0" step="1" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>本笔建议张数</h2>
+    <div class="result-big" id="qtyOut">—</div>
+    <div class="result-line" id="detailOut"></div>
+    <button type="button" class="btn" id="copyBtn">复制张数到剪贴板</button>
+    <p class="note">若结果为 0：要么权益太小，要么已接近总保证金上限，不应再加仓。实盘以富途 APP 保证金、强平线为准。</p>
+  </div>
+
+  <script>
+    function floor(n) {
+      return Math.floor(n);
+    }
+    function calc() {
+      var eq = parseFloat(document.getElementById("equity").value) || 0;
+      var margin = parseFloat(document.getElementById("margin").value) || 1;
+      var slice = parseFloat(document.getElementById("slice").value) || 10;
+      var maxU = parseFloat(document.getElementById("maxUsage").value);
+      if (isNaN(maxU)) maxU = 0.6;
+      var posAbs = Math.abs(parseFloat(document.getElementById("position").value) || 0);
+
+      if (eq <= 0 || margin <= 0) {
+        document.getElementById("qtyOut").textContent = "—";
+        document.getElementById("detailOut").textContent = "请填写有效权益与保证金";
+        return;
+      }
+
+      var budgetSlice = eq * (slice / 100);
+      var want = floor(budgetSlice / margin);
+      var used = posAbs * margin;
+      var maxBudget = eq * maxU;
+      var marginRemain = maxBudget - used;
+      var capByTotal = marginRemain > 0 ? floor(marginRemain / margin) : 0;
+      var q = Math.max(0, Math.min(want, capByTotal));
+
+      document.getElementById("qtyOut").textContent = q + " 张";
+
+      document.getElementById("detailOut").innerHTML =
+        "want=" + want + "（来自 " + slice + "% 权益÷每张） · cap=" + capByTotal +
+        "（总上限 " + (maxU * 100).toFixed(0) + "%权益≈$" + maxBudget.toLocaleString(undefined, { maximumFractionDigits: 0 }) +
+        " − 已占用 $" + used.toLocaleString(undefined, { maximumFractionDigits: 0 }) + "）";
+
+      window._lastQty = String(q);
+    }
+
+    ["equity", "margin", "slice", "maxUsage", "position"].forEach(function (id) {
+      document.getElementById(id).addEventListener("input", calc);
+    });
+
+    document.getElementById("copyBtn").addEventListener("click", function () {
+      var t = window._lastQty;
+      if (!t) {
+        var m = document.getElementById("qtyOut").textContent.match(/(\d+)/);
+        t = m ? m[1] : "";
+      }
+      navigator.clipboard.writeText(t).then(function () {
+        document.getElementById("copyBtn").textContent = "已复制：" + t;
+        setTimeout(function () {
+          document.getElementById("copyBtn").textContent = "复制张数到剪贴板";
+        }, 1500);
+      });
+    });
+
+    calc();
+  </script>
+</body>
+</html>

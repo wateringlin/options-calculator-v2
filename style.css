@@ -748,3 +748,473 @@ body {
         padding-bottom: calc(32px + env(safe-area-inset-bottom));
     }
 }
+
+/* ===== Risk Status Section ===== */
+.risk-status-section {
+    background: linear-gradient(145deg, #1a1520, #14101a);
+    border: 2px solid var(--accent-purple);
+}
+
+.risk-status-section .card-title {
+    color: var(--accent-purple);
+}
+
+.risk-status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.risk-status-item {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+}
+
+.risk-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.risk-value {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.risk-alert {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(255, 77, 106, 0.15);
+    border: 1px solid rgba(255, 77, 106, 0.4);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+}
+
+.risk-alert-icon {
+    font-size: 1.2rem;
+}
+
+.risk-alert-text {
+    font-size: 0.8rem;
+    color: var(--accent-red);
+    font-weight: 600;
+}
+
+.trading-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
+    background: rgba(0, 214, 143, 0.1);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0, 214, 143, 0.3);
+}
+
+.trading-status.danger {
+    background: rgba(255, 77, 106, 0.15);
+    border-color: rgba(255, 77, 106, 0.4);
+}
+
+.trading-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.trading-status-dot.green {
+    background: var(--accent-green);
+    box-shadow: 0 0 10px var(--accent-green);
+}
+
+.trading-status-dot.red {
+    background: var(--accent-red);
+    box-shadow: 0 0 10px var(--accent-red);
+    animation: none;
+}
+
+.trading-status-dot.yellow {
+    background: var(--accent-orange);
+    box-shadow: 0 0 10px var(--accent-orange);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.trading-status-text {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent-green);
+}
+
+.trading-status.danger .trading-status-text {
+    color: var(--accent-red);
+}
+
+/* ===== Checklist Section ===== */
+.checklist-section {
+    background: linear-gradient(145deg, #1a2014, #141a10);
+    border: 1px solid rgba(0, 214, 143, 0.3);
+}
+
+.checklist-section .card-title {
+    color: var(--accent-green);
+}
+
+.checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.checklist-item:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.checklist-checkbox {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.checkmark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--text-muted);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.checklist-item:has(.checklist-checkbox:checked) .checkmark {
+    background: var(--accent-green);
+    border-color: var(--accent-green);
+}
+
+.checklist-item:has(.checklist-checkbox:checked) .checkmark::after {
+    content: '✓';
+    color: white;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.checklist-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.checklist-item:has(.checklist-checkbox:checked) .checklist-text {
+    color: var(--accent-green);
+}
+
+.checklist-result {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(255, 77, 106, 0.1);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 77, 106, 0.3);
+}
+
+.checklist-result.passed {
+    background: rgba(0, 214, 143, 0.1);
+    border-color: rgba(0, 214, 143, 0.3);
+}
+
+.checklist-icon {
+    font-size: 1rem;
+}
+
+.checklist-status {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent-red);
+}
+
+.checklist-result.passed .checklist-status {
+    color: var(--accent-green);
+}
+
+/* ===== Anti-Martin Box ===== */
+.anti-martin-box {
+    background: rgba(255, 77, 106, 0.1);
+    border: 1px solid rgba(255, 77, 106, 0.3);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.anti-martin-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent-red);
+    margin-bottom: 10px;
+}
+
+.anti-martin-rules {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.rule-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+}
+
+.rule-condition {
+    color: var(--text-muted);
+}
+
+.rule-action {
+    color: var(--text-secondary);
+}
+
+.rule-action strong {
+    color: var(--accent-orange);
+}
+
+.rule-action .stop-trading {
+    color: var(--accent-red);
+}
+
+.rule-item.success {
+    border: 1px solid rgba(0, 214, 143, 0.3);
+}
+
+.rule-item.success .rule-action strong {
+    color: var(--accent-green);
+}
+
+/* ===== Trade History Section ===== */
+.trade-history-section {
+    background: linear-gradient(145deg, #1a1a20, #141418);
+    border: 1px solid rgba(151, 117, 250, 0.3);
+}
+
+.trade-history-section .card-title {
+    color: var(--accent-purple);
+}
+
+.trade-input-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.trade-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.trade-input:focus {
+    border-color: var(--accent-purple);
+}
+
+.trade-input::placeholder {
+    color: var(--text-muted);
+}
+
+.trade-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-profit {
+    background: rgba(0, 214, 143, 0.2);
+    color: var(--accent-green);
+    border: 1px solid rgba(0, 214, 143, 0.4);
+}
+
+.btn-profit:hover {
+    background: rgba(0, 214, 143, 0.3);
+}
+
+.btn-loss {
+    background: rgba(255, 77, 106, 0.2);
+    color: var(--accent-red);
+    border: 1px solid rgba(255, 77, 106, 0.4);
+}
+
+.btn-loss:hover {
+    background: rgba(255, 77, 106, 0.3);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.trade-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.stat-item {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.trade-history-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+}
+
+.trade-history-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.trade-history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+}
+
+.trade-history-item.profit {
+    border-left: 3px solid var(--accent-green);
+}
+
+.trade-history-item.loss {
+    border-left: 3px solid var(--accent-red);
+}
+
+.trade-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.trade-symbol {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.trade-date {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+.trade-pnl {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.trade-pnl.profit {
+    color: var(--accent-green);
+}
+
+.trade-pnl.loss {
+    color: var(--accent-red);
+}
+
+.trade-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* ===== Note Item Warning ===== */
+.note-item.warning {
+    background: rgba(255, 77, 106, 0.1);
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+}
+
+.note-item.warning .note-text {
+    color: var(--accent-red);
+}
+
+.note-item.warning .note-text strong {
+    color: var(--accent-red);
+}
+
+/* ===== Input wrapper prefix ===== */
+.input-wrapper .prefix {
+    padding-left: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}

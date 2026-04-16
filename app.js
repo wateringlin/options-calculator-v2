@@ -1,8 +1,57 @@
 /**
- * Options Credit Spread Calculator
+ * Options Credit Spread Calculator - 反马丁风控版
  * 计算垂直价差策略的单腿止盈止损目标价
  * 适配富途单腿条件单设置
+ * 
+ * 核心改进：
+ * 1. 反马丁仓位管理：亏损减仓，盈利恢复
+ * 2. 每日风险限额：防止单日爆仓
+ * 3. 交易记录系统：追踪真实表现
+ * 4. 开仓检查清单：防止冲动交易
  */
+
+// ===== 本地存储管理 =====
+const STORAGE_KEYS = {
+    TRADES: 'options_trades',
+    CAPITAL: 'options_capital',
+    DAILY_PNL: 'options_daily_pnl',
+    CONSECUTIVE_LOSSES: 'options_consecutive_losses',
+    LAST_TRADE_DATE: 'options_last_trade_date'
+};
+
+// 获取存储数据
+function getStoredData(key, defaultValue) {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : defaultValue;
+    } catch (e) {
+        return defaultValue;
+    }
+}
+
+// 保存存储数据
+function setStoredData(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+        console.error('存储失败:', e);
+    }
+}
+
+// 检查是否是新的一天
+function isNewDay() {
+    const lastDate = getStoredData(STORAGE_KEYS.LAST_TRADE_DATE, '');
+    const today = new Date().toDateString();
+    return lastDate !== today;
+}
+
+// 重置每日数据
+function resetDailyData() {
+    if (isNewDay()) {
+        setStoredData(STORAGE_KEYS.DAILY_PNL, 0);
+        setStoredData(STORAGE_KEYS.LAST_TRADE_DATE, new Date().toDateString());
+    }
+}
 
 // DOM Elements
 const sellPriceInput = document.getElementById('sellPrice');
@@ -40,11 +89,38 @@ const comparisonTableBodyEl = document.getElementById('comparisonTableBody');
 // Position Sizing Elements
 const totalCapitalInput = document.getElementById('totalCapital');
 const riskPercentInput = document.getElementById('riskPercent');
-const maxRiskAmountEl = document.getElementById('maxRiskAmount');
+const dailyMaxLossInput = document.getElementById('dailyMaxLoss');
+const weeklyMaxLossInput = document.getElementById('weeklyMaxLoss');
+const baseRiskAmountEl = document.getElementById('baseRiskAmount');
+const currentPositionMultiplierEl = document.getElementById('currentPositionMultiplier');
+const adjustedRiskAmountEl = document.getElementById('adjustedRiskAmount');
 const recommendedContractsEl = document.getElementById('recommendedContracts');
 const actualMaxLossEl = document.getElementById('actualMaxLoss');
 const potentialProfitEl = document.getElementById('potentialProfit');
+const remainingDailyRiskEl = document.getElementById('remainingDailyRisk');
 const kellyPercentEl = document.getElementById('kellyPercent');
+
+// Risk Status Elements
+const currentCapitalEl = document.getElementById('currentCapital');
+const todayPnLEl = document.getElementById('todayPnL');
+const todayRiskUsedEl = document.getElementById('todayRiskUsed');
+const consecutiveLossesEl = document.getElementById('consecutiveLosses');
+const riskAlertEl = document.getElementById('riskAlert');
+const riskAlertTextEl = document.getElementById('riskAlertText');
+const tradingStatusEl = document.getElementById('tradingStatus');
+
+// Trade History Elements
+const tradeSymbolInput = document.getElementById('tradeSymbol');
+const tradeContractsInput = document.getElementById('tradeContracts');
+const tradePnLInput = document.getElementById('tradePnL');
+const totalTradesEl = document.getElementById('totalTrades');
+const actualWinRateEl = document.getElementById('actualWinRate');
+const totalPnLEl = document.getElementById('totalPnL');
+const maxDrawdownEl = document.getElementById('maxDrawdown');
+const tradeHistoryListEl = document.getElementById('tradeHistoryList');
+
+// Checklist Elements
+const checklistResultEl = document.getElementById('checklistResult');
 
 /**
  * 格式化价格显示
@@ -332,18 +408,48 @@ function calculate() {
     // ===== 生成对照表 =====
     comparisonTableBodyEl.innerHTML = generateComparisonTable(takeProfitPercent, stopLossPercent);
     
-    // ===== 本金管理计算 =====
+    // ===== 反马丁仓位管理计算 =====
     const totalCapital = parseFloat(totalCapitalInput?.value) || 50000;
     const riskPercent = parseFloat(riskPercentInput?.value) || 2;
+    const dailyMaxLoss = parseFloat(dailyMaxLossInput?.value) || 3;
     
-    // 单次最大风险金额
-    const maxRiskAmount = totalCapital * (riskPercent / 100);
+    // 获取当前状态
+    const consecutiveLosses = getStoredData(STORAGE_KEYS.CONSECUTIVE_LOSSES, 0);
+    const todayPnL = getStoredData(STORAGE_KEYS.DAILY_PNL, 0);
+    const currentCapital = totalCapital + getTotalPnL();
+    
+    // 基础风险金额
+    const baseRiskAmount = currentCapital * (riskPercent / 100);
+    
+    // 反马丁仓位系数
+    let positionMultiplier = 1.0;
+    let multiplierText = '100%';
+    if (consecutiveLosses === 1) {
+        positionMultiplier = 0.75;
+        multiplierText = '75% (连亏1次)';
+    } else if (consecutiveLosses === 2) {
+        positionMultiplier = 0.5;
+        multiplierText = '50% (连亏2次)';
+    } else if (consecutiveLosses >= 3) {
+        positionMultiplier = 0;
+        multiplierText = '0% (停止交易)';
+    }
+    
+    // 调整后的风险金额
+    const adjustedRiskAmount = baseRiskAmount * positionMultiplier;
+    
+    // 每日剩余风险额度
+    const dailyMaxLossAmount = currentCapital * (dailyMaxLoss / 100);
+    const remainingDailyRisk = Math.max(0, dailyMaxLossAmount + todayPnL);
+    
+    // 实际可用风险（取较小值）
+    const effectiveRisk = Math.min(adjustedRiskAmount, remainingDailyRisk);
     
     // 每份合约的最大亏损（基于止损金额，乘以100因为期权合约是100股）
     const lossPerContract = lossAmount * 100;
     
     // 建议合约数
-    const recommendedContracts = lossPerContract > 0 ? Math.floor(maxRiskAmount / lossPerContract) : 0;
+    const recommendedContracts = lossPerContract > 0 ? Math.floor(effectiveRisk / lossPerContract) : 0;
     
     // 实际最大亏损
     const actualMaxLoss = recommendedContracts * lossPerContract;
@@ -352,28 +458,42 @@ function calculate() {
     const potentialProfit = recommendedContracts * profitAmount * 100;
     
     // 凯利公式计算: f* = (bp - q) / b
-    // b = 赔率 (止盈/止损), p = 胜率, q = 败率
     const b = takeProfitPercent / stopLossPercent;
     const p = recommendation.winRate / 100;
     const q = 1 - p;
     const kellyPercent = Math.max(0, ((b * p - q) / b) * 100);
     
     // 更新显示
-    if (maxRiskAmountEl) {
-        maxRiskAmountEl.textContent = `$${maxRiskAmount.toLocaleString()}`;
+    if (baseRiskAmountEl) {
+        baseRiskAmountEl.textContent = `$${baseRiskAmount.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+    }
+    if (currentPositionMultiplierEl) {
+        currentPositionMultiplierEl.textContent = multiplierText;
+        currentPositionMultiplierEl.style.color = positionMultiplier === 1 ? 'var(--accent-green)' : 
+            positionMultiplier === 0 ? 'var(--accent-red)' : 'var(--accent-orange)';
+    }
+    if (adjustedRiskAmountEl) {
+        adjustedRiskAmountEl.textContent = `$${effectiveRisk.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
     }
     if (recommendedContractsEl) {
         recommendedContractsEl.textContent = `${recommendedContracts} 份`;
     }
     if (actualMaxLossEl) {
-        actualMaxLossEl.textContent = `-$${actualMaxLoss.toLocaleString()}`;
+        actualMaxLossEl.textContent = `-$${actualMaxLoss.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
     }
     if (potentialProfitEl) {
-        potentialProfitEl.textContent = `+$${potentialProfit.toLocaleString()}`;
+        potentialProfitEl.textContent = `+$${potentialProfit.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+    }
+    if (remainingDailyRiskEl) {
+        remainingDailyRiskEl.textContent = `$${remainingDailyRisk.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+        remainingDailyRiskEl.style.color = remainingDailyRisk > dailyMaxLossAmount * 0.5 ? 'var(--accent-green)' : 'var(--accent-orange)';
     }
     if (kellyPercentEl) {
         kellyPercentEl.textContent = `${kellyPercent.toFixed(1)}%`;
     }
+    
+    // 更新风险状态面板
+    updateRiskStatus(currentCapital, todayPnL, dailyMaxLossAmount, consecutiveLosses, positionMultiplier);
 }
 
 /**
@@ -433,3 +553,300 @@ function loadFromURL() {
 }
 
 loadFromURL();
+
+// ===== 风险状态更新 =====
+function updateRiskStatus(currentCapital, todayPnL, dailyMaxLossAmount, consecutiveLosses, positionMultiplier) {
+    // 更新当前本金
+    if (currentCapitalEl) {
+        currentCapitalEl.textContent = `$${currentCapital.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+    }
+    
+    // 更新今日盈亏
+    if (todayPnLEl) {
+        const sign = todayPnL >= 0 ? '+' : '';
+        todayPnLEl.textContent = `${sign}$${todayPnL.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+        todayPnLEl.style.color = todayPnL >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+    }
+    
+    // 更新今日已用风险
+    if (todayRiskUsedEl) {
+        const usedPercent = dailyMaxLossAmount > 0 ? Math.abs(Math.min(0, todayPnL)) / dailyMaxLossAmount * 100 : 0;
+        todayRiskUsedEl.textContent = `${usedPercent.toFixed(0)}%`;
+        todayRiskUsedEl.style.color = usedPercent < 50 ? 'var(--accent-green)' : 
+            usedPercent < 80 ? 'var(--accent-orange)' : 'var(--accent-red)';
+    }
+    
+    // 更新连续亏损
+    if (consecutiveLossesEl) {
+        consecutiveLossesEl.textContent = `${consecutiveLosses} 次`;
+        consecutiveLossesEl.style.color = consecutiveLosses === 0 ? 'var(--accent-green)' :
+            consecutiveLosses < 3 ? 'var(--accent-orange)' : 'var(--accent-red)';
+    }
+    
+    // 更新风险警告
+    let showAlert = false;
+    let alertText = '';
+    
+    if (consecutiveLosses >= 3) {
+        showAlert = true;
+        alertText = '连续亏损3次，建议停止交易休息一天！';
+    } else if (todayPnL <= -dailyMaxLossAmount) {
+        showAlert = true;
+        alertText = '已达到每日最大亏损，今日停止交易！';
+    } else if (todayPnL <= -dailyMaxLossAmount * 0.8) {
+        showAlert = true;
+        alertText = '接近每日最大亏损，请谨慎操作！';
+    }
+    
+    if (riskAlertEl && riskAlertTextEl) {
+        riskAlertEl.style.display = showAlert ? 'flex' : 'none';
+        riskAlertTextEl.textContent = alertText;
+    }
+    
+    // 更新交易状态
+    if (tradingStatusEl) {
+        const canTrade = positionMultiplier > 0 && todayPnL > -dailyMaxLossAmount;
+        const dot = tradingStatusEl.querySelector('.trading-status-dot');
+        const text = tradingStatusEl.querySelector('.trading-status-text');
+        
+        if (canTrade) {
+            if (consecutiveLosses > 0 || todayPnL < 0) {
+                tradingStatusEl.className = 'trading-status';
+                dot.className = 'trading-status-dot yellow';
+                text.textContent = '谨慎开仓';
+                text.style.color = 'var(--accent-orange)';
+            } else {
+                tradingStatusEl.className = 'trading-status';
+                dot.className = 'trading-status-dot green';
+                text.textContent = '可以开仓';
+                text.style.color = 'var(--accent-green)';
+            }
+        } else {
+            tradingStatusEl.className = 'trading-status danger';
+            dot.className = 'trading-status-dot red';
+            text.textContent = '停止交易';
+            text.style.color = 'var(--accent-red)';
+        }
+    }
+}
+
+// ===== 交易记录功能 =====
+function getTrades() {
+    return getStoredData(STORAGE_KEYS.TRADES, []);
+}
+
+function saveTrades(trades) {
+    setStoredData(STORAGE_KEYS.TRADES, trades);
+}
+
+function getTotalPnL() {
+    const trades = getTrades();
+    return trades.reduce((sum, t) => sum + t.pnl, 0);
+}
+
+function recordTrade(type) {
+    const symbol = tradeSymbolInput?.value || 'SPY';
+    const contracts = parseInt(tradeContractsInput?.value) || 1;
+    let pnl = parseFloat(tradePnLInput?.value) || 0;
+    
+    // 如果点击亏损按钮但输入的是正数，自动转为负数
+    if (type === 'loss' && pnl > 0) {
+        pnl = -pnl;
+    }
+    // 如果点击盈利按钮但输入的是负数，自动转为正数
+    if (type === 'profit' && pnl < 0) {
+        pnl = -pnl;
+    }
+    
+    const trade = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        symbol: symbol.toUpperCase(),
+        contracts,
+        pnl,
+        type: pnl >= 0 ? 'profit' : 'loss'
+    };
+    
+    // 保存交易
+    const trades = getTrades();
+    trades.unshift(trade);
+    saveTrades(trades);
+    
+    // 更新连续亏损计数
+    let consecutiveLosses = getStoredData(STORAGE_KEYS.CONSECUTIVE_LOSSES, 0);
+    if (pnl < 0) {
+        consecutiveLosses++;
+    } else {
+        consecutiveLosses = 0; // 盈利重置
+    }
+    setStoredData(STORAGE_KEYS.CONSECUTIVE_LOSSES, consecutiveLosses);
+    
+    // 更新今日盈亏
+    let todayPnL = getStoredData(STORAGE_KEYS.DAILY_PNL, 0);
+    todayPnL += pnl;
+    setStoredData(STORAGE_KEYS.DAILY_PNL, todayPnL);
+    
+    // 清空输入
+    if (tradeSymbolInput) tradeSymbolInput.value = '';
+    if (tradeContractsInput) tradeContractsInput.value = '';
+    if (tradePnLInput) tradePnLInput.value = '';
+    
+    // 刷新显示
+    updateTradeStats();
+    renderTradeHistory();
+    calculate();
+}
+
+function updateTradeStats() {
+    const trades = getTrades();
+    const totalTrades = trades.length;
+    const winningTrades = trades.filter(t => t.pnl > 0).length;
+    const winRate = totalTrades > 0 ? (winningTrades / totalTrades * 100) : 0;
+    const totalPnL = trades.reduce((sum, t) => sum + t.pnl, 0);
+    
+    // 计算最大回撤
+    let peak = 0;
+    let maxDrawdown = 0;
+    let cumPnL = 0;
+    for (let i = trades.length - 1; i >= 0; i--) {
+        cumPnL += trades[i].pnl;
+        if (cumPnL > peak) peak = cumPnL;
+        const drawdown = peak - cumPnL;
+        if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+    }
+    
+    if (totalTradesEl) totalTradesEl.textContent = totalTrades;
+    if (actualWinRateEl) {
+        actualWinRateEl.textContent = `${winRate.toFixed(0)}%`;
+        actualWinRateEl.style.color = winRate >= 70 ? 'var(--accent-green)' : 
+            winRate >= 50 ? 'var(--accent-orange)' : 'var(--accent-red)';
+    }
+    if (totalPnLEl) {
+        const sign = totalPnL >= 0 ? '+' : '';
+        totalPnLEl.textContent = `${sign}$${totalPnL.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+        totalPnLEl.style.color = totalPnL >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+    }
+    if (maxDrawdownEl) {
+        maxDrawdownEl.textContent = `-$${maxDrawdown.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+        maxDrawdownEl.style.color = 'var(--accent-red)';
+    }
+}
+
+function renderTradeHistory() {
+    const trades = getTrades();
+    
+    if (!tradeHistoryListEl) return;
+    
+    if (trades.length === 0) {
+        tradeHistoryListEl.innerHTML = '<div class="trade-history-empty">暂无交易记录</div>';
+        return;
+    }
+    
+    const html = trades.slice(0, 20).map(trade => {
+        const date = new Date(trade.date);
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+        const pnlClass = trade.pnl >= 0 ? 'profit' : 'loss';
+        const sign = trade.pnl >= 0 ? '+' : '';
+        
+        return `
+            <div class="trade-history-item ${pnlClass}">
+                <div class="trade-info">
+                    <span class="trade-symbol">${trade.symbol} x${trade.contracts}</span>
+                    <span class="trade-date">${dateStr}</span>
+                </div>
+                <span class="trade-pnl ${pnlClass}">${sign}$${trade.pnl.toLocaleString()}</span>
+            </div>
+        `;
+    }).join('');
+    
+    tradeHistoryListEl.innerHTML = html;
+}
+
+function clearTrades() {
+    if (confirm('确定要清空所有交易记录吗？此操作不可恢复。')) {
+        setStoredData(STORAGE_KEYS.TRADES, []);
+        setStoredData(STORAGE_KEYS.DAILY_PNL, 0);
+        setStoredData(STORAGE_KEYS.CONSECUTIVE_LOSSES, 0);
+        updateTradeStats();
+        renderTradeHistory();
+        calculate();
+    }
+}
+
+function exportTrades() {
+    const trades = getTrades();
+    if (trades.length === 0) {
+        alert('没有交易记录可导出');
+        return;
+    }
+    
+    const headers = ['日期', '标的', '合约数', '盈亏', '类型'];
+    const rows = trades.map(t => [
+        new Date(t.date).toLocaleString(),
+        t.symbol,
+        t.contracts,
+        t.pnl,
+        t.type === 'profit' ? '盈利' : '亏损'
+    ]);
+    
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `期权交易记录_${new Date().toLocaleDateString()}.csv`;
+    link.click();
+}
+
+// ===== 开仓检查清单 =====
+function updateChecklist() {
+    const checkboxes = document.querySelectorAll('.checklist-checkbox');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    if (checklistResultEl) {
+        if (allChecked) {
+            checklistResultEl.className = 'checklist-result passed';
+            checklistResultEl.innerHTML = '<span class="checklist-icon">🟢</span><span class="checklist-status">检查通过，可以开仓</span>';
+        } else {
+            checklistResultEl.className = 'checklist-result';
+            checklistResultEl.innerHTML = '<span class="checklist-icon">🔴</span><span class="checklist-status">请完成所有检查项</span>';
+        }
+    }
+}
+
+// 绑定检查清单事件
+document.querySelectorAll('.checklist-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateChecklist);
+});
+
+// ===== 初始化 =====
+function init() {
+    resetDailyData();
+    updateTradeStats();
+    renderTradeHistory();
+    updateChecklist();
+    
+    // 从本地存储恢复本金设置
+    const savedCapital = getStoredData(STORAGE_KEYS.CAPITAL, null);
+    if (savedCapital && totalCapitalInput) {
+        totalCapitalInput.value = savedCapital;
+    }
+    
+    // 监听本金变化并保存
+    if (totalCapitalInput) {
+        totalCapitalInput.addEventListener('change', () => {
+            setStoredData(STORAGE_KEYS.CAPITAL, parseFloat(totalCapitalInput.value) || 50000);
+        });
+    }
+}
+
+// 本金管理输入框事件监听
+if (dailyMaxLossInput) {
+    dailyMaxLossInput.addEventListener('input', debouncedCalculate);
+    dailyMaxLossInput.addEventListener('change', calculate);
+}
+if (weeklyMaxLossInput) {
+    weeklyMaxLossInput.addEventListener('input', debouncedCalculate);
+    weeklyMaxLossInput.addEventListener('change', calculate);
+}
+
+init();
