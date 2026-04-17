@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0d1117" />
-  <title>VXM 富途下单张数计算器 · 策略对齐</title>
+  <title>VXM 富途下单张数 · 与策略 entry_qty_vxm 对齐</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -14,6 +14,7 @@
       --muted: #8b949e;
       --accent: #58a6ff;
       --green: #3fb950;
+      --red: #f85149;
       --orange: #d29922;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,37 +26,24 @@
       padding: 20px 16px 48px;
       min-height: 100vh;
     }
-    h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-      letter-spacing: -0.02em;
-    }
-    .sub {
-      color: var(--muted);
-      font-size: 0.85rem;
-      margin-bottom: 20px;
-    }
+    h1 { font-size: 1.2rem; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.02em; }
+    .sub { color: var(--muted); font-size: 0.82rem; margin-bottom: 16px; }
+    .sub code { font-size: 0.78rem; background: #21262d; padding: 2px 6px; border-radius: 4px; }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 18px 16px;
-      margin-bottom: 14px;
+      padding: 16px 14px;
+      margin-bottom: 12px;
     }
     .card h2 {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--muted);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
-    label {
-      display: block;
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
+    label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
     input {
       width: 100%;
       padding: 10px 12px;
@@ -63,161 +51,211 @@
       border: 1px solid var(--border);
       background: #0d1117;
       color: var(--text);
-      font-size: 1rem;
-      margin-bottom: 12px;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
     }
-    input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-    .row2 {
+    input:focus { outline: none; border-color: var(--accent); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .section-tag { font-size: 0.72rem; color: var(--green); margin-bottom: 6px; font-weight: 600; }
+    .section-tag.short { color: var(--red); }
+    .result-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
+      margin-top: 8px;
     }
+    .result-box { background: #0d1117; border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .result-box .lbl { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
     .result-big {
-      font-size: 2.25rem;
+      font-size: 1.75rem;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       color: var(--green);
-      margin: 8px 0 4px;
     }
-    .result-line {
-      font-size: 0.88rem;
-      color: var(--muted);
-    }
+    .result-box.short .result-big { color: var(--red); }
+    .result-line { font-size: 0.8rem; color: var(--muted); margin-top: 8px; line-height: 1.45; }
     .btn {
-      display: inline-block;
+      display: block;
       width: 100%;
-      margin-top: 12px;
-      padding: 12px;
+      margin-top: 8px;
+      padding: 10px;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       background: var(--accent);
       color: #fff;
       font-weight: 600;
-      font-size: 0.95rem;
+      font-size: 0.88rem;
       cursor: pointer;
     }
-    .btn:active { opacity: 0.88; }
+    .btn.secondary { background: #21262d; color: var(--text); border: 1px solid var(--border); }
+    .btn:active { opacity: 0.9; }
     .note {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: var(--muted);
       border-left: 3px solid var(--orange);
-      padding-left: 12px;
-      margin-top: 12px;
-    }
-    details {
-      margin-top: 8px;
-    }
-    details summary {
-      cursor: pointer;
-      color: var(--accent);
-      font-size: 0.9rem;
-    }
-    pre {
+      padding-left: 10px;
       margin-top: 10px;
-      padding: 12px;
+    }
+    details { margin-top: 8px; }
+    details summary { cursor: pointer; color: var(--accent); font-size: 0.86rem; }
+    pre {
+      margin-top: 8px;
+      padding: 10px;
       border-radius: 8px;
       background: #0d1117;
       border: 1px solid var(--border);
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       overflow-x: auto;
       white-space: pre-wrap;
       color: var(--text);
     }
-    a { color: var(--accent); }
   </style>
 </head>
 <body>
-  <h1>VXM 富途 · 下单张数</h1>
-  <p class="sub">与 Pine 策略 <code>entry_qty_vxm()</code> 同一套公式：10% 权益为单笔保证金预算 ÷ 每张保证金，且总占用 ≤ 权益 × 最大比例。填好后得到「本笔可下张数」。</p>
+  <h1>VXM 富途 · 张数计算器</h1>
+  <p class="sub">对齐 <code>vxm期货-日线-多空均做-+spx-trend-1分线.md</code> 中 <code>entry_qty_vxm(isLong)</code>：多头/空头使用不同 <code>SLICE_*</code> 与 <code>MAX_*</code>；佣金为回测用 <code>FUTU_VXM_COMMISSION_PER_CONTRACT=4</code>（不进入张数公式）。</p>
 
   <div class="card">
-    <h2>参数（与策略脚本常数对齐）</h2>
-    <label for="equity">当前账户权益 equity（USD）</label>
+    <h2>公共输入</h2>
+    <label for="equity">当前账户权益 equity（USD，对应 strategy.equity）</label>
     <input type="number" id="equity" value="100000" min="0" step="100" />
     <div class="row2">
       <div>
-        <label for="margin">每张初始保证金 MARGIN_PER_CONTRACT（USD）</label>
+        <label for="margin">MARGIN_PER_CONTRACT 每张保证金（USD）</label>
         <input type="number" id="margin" value="1300" min="1" step="10" />
       </div>
       <div>
-        <label for="slice">单笔占权益比例 SLICE_EQUITY_PCT（%）</label>
-        <input type="number" id="slice" value="10" min="0.1" step="0.1" />
-      </div>
-    </div>
-    <div class="row2">
-      <div>
-        <label for="maxUsage">总保证金上限 MAX_MARGIN_USAGE（小数，如 0.6 = 60%）</label>
-        <input type="number" id="maxUsage" value="0.6" min="0.01" max="1" step="0.05" />
-      </div>
-      <div>
-        <label for="position">当前已持有张数（含多正空负，填绝对值）</label>
+        <label for="position">当前已持仓张数绝对值 |position|</label>
         <input type="number" id="position" value="0" min="0" step="1" />
       </div>
     </div>
   </div>
 
   <div class="card">
-    <h2>本笔建议张数</h2>
-    <div class="result-big" id="qtyOut">—</div>
-    <div class="result-line" id="detailOut"></div>
-    <button type="button" class="btn" id="copyBtn">复制张数到剪贴板</button>
-    <p class="note">若结果为 0：要么权益太小，要么已接近总保证金上限，不应再加仓。实盘以富途 APP 保证金、强平线为准。</p>
+    <h2>多头（开多 / 加多）— 与脚本一致</h2>
+    <p class="section-tag">SLICE_EQUITY_PCT_LONG · MAX_MARGIN_USAGE_LONG</p>
+    <div class="row2">
+      <div>
+        <label for="sliceL">单笔保证金预算占权益（%）</label>
+        <input type="number" id="sliceL" value="10" min="0.1" step="0.1" />
+      </div>
+      <div>
+        <label for="maxL">总保证金占权益上限（小数）</label>
+        <input type="number" id="maxL" value="0.7" min="0.01" max="1" step="0.05" />
+      </div>
+    </div>
   </div>
 
+  <div class="card">
+    <h2>空头（开空 / 加空）— 与脚本一致</h2>
+    <p class="section-tag short">SLICE_EQUITY_PCT_SHORT · MAX_MARGIN_USAGE_SHORT</p>
+    <div class="row2">
+      <div>
+        <label for="sliceS">单笔保证金预算占权益（%）</label>
+        <input type="number" id="sliceS" value="3" min="0.1" step="0.1" />
+      </div>
+      <div>
+        <label for="maxS">总保证金占权益上限（小数）</label>
+        <input type="number" id="maxS" value="0.1" min="0.01" max="1" step="0.05" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>计算结果</h2>
+    <div class="result-row">
+      <div class="result-box">
+        <div class="lbl">做多 longQty = entry_qty_vxm(true)</div>
+        <div class="result-big" id="qtyLong">—</div>
+        <button type="button" class="btn" id="copyLong">复制做多张数</button>
+        <div class="result-line" id="detailLong"></div>
+      </div>
+      <div class="result-box short">
+        <div class="lbl">做空 shortQty = entry_qty_vxm(false)</div>
+        <div class="result-big" id="qtyShort">—</div>
+        <button type="button" class="btn secondary" id="copyShort">复制做空张数</button>
+        <div class="result-line" id="detailShort"></div>
+      </div>
+    </div>
+  </div>
+
+  
+
+  
+
   <script>
-    function floor(n) {
-      return Math.floor(n);
+    function floor(n) { return Math.floor(n); }
+
+    function entryQty(isLong, eq, margin, posAbs, sliceL, maxL, sliceS, maxS) {
+      var slicePct = isLong ? sliceL : sliceS;
+      var maxUse = isLong ? maxL : maxS;
+      if (eq <= 0 || margin <= 0) return { q: 0, want: 0, cap: 0, maxBudget: 0, used: 0, slicePct: slicePct, maxUse: maxUse };
+      var budgetSlice = eq * (slicePct / 100);
+      var want = floor(budgetSlice / margin);
+      var used = posAbs * margin;
+      var maxBudget = eq * maxUse;
+      var marginRemain = maxBudget - used;
+      var cap = marginRemain > 0 ? floor(marginRemain / margin) : 0;
+      var q = Math.max(0, Math.min(want, cap));
+      return { q: q, want: want, cap: cap, maxBudget: maxBudget, used: used, slicePct: slicePct, maxUse: maxUse };
     }
+
+    function fmtMoney(x) {
+      return x.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
     function calc() {
       var eq = parseFloat(document.getElementById("equity").value) || 0;
       var margin = parseFloat(document.getElementById("margin").value) || 1;
-      var slice = parseFloat(document.getElementById("slice").value) || 10;
-      var maxU = parseFloat(document.getElementById("maxUsage").value);
-      if (isNaN(maxU)) maxU = 0.6;
       var posAbs = Math.abs(parseFloat(document.getElementById("position").value) || 0);
+      var sliceL = parseFloat(document.getElementById("sliceL").value);
+      var maxL = parseFloat(document.getElementById("maxL").value);
+      var sliceS = parseFloat(document.getElementById("sliceS").value);
+      var maxS = parseFloat(document.getElementById("maxS").value);
+      if (isNaN(sliceL)) sliceL = 10;
+      if (isNaN(maxL)) maxL = 0.7;
+      if (isNaN(sliceS)) sliceS = 3;
+      if (isNaN(maxS)) maxS = 0.1;
 
       if (eq <= 0 || margin <= 0) {
-        document.getElementById("qtyOut").textContent = "—";
-        document.getElementById("detailOut").textContent = "请填写有效权益与保证金";
+        document.getElementById("qtyLong").textContent = "—";
+        document.getElementById("qtyShort").textContent = "—";
+        document.getElementById("detailLong").textContent = "";
+        document.getElementById("detailShort").textContent = "";
         return;
       }
 
-      var budgetSlice = eq * (slice / 100);
-      var want = floor(budgetSlice / margin);
-      var used = posAbs * margin;
-      var maxBudget = eq * maxU;
-      var marginRemain = maxBudget - used;
-      var capByTotal = marginRemain > 0 ? floor(marginRemain / margin) : 0;
-      var q = Math.max(0, Math.min(want, capByTotal));
+      var rL = entryQty(true, eq, margin, posAbs, sliceL, maxL, sliceS, maxS);
+      var rS = entryQty(false, eq, margin, posAbs, sliceL, maxL, sliceS, maxS);
 
-      document.getElementById("qtyOut").textContent = q + " 张";
+      document.getElementById("qtyLong").textContent = rL.q + " 张";
+      document.getElementById("qtyShort").textContent = rS.q + " 张";
 
-      document.getElementById("detailOut").innerHTML =
-        "want=" + want + "（来自 " + slice + "% 权益÷每张） · cap=" + capByTotal +
-        "（总上限 " + (maxU * 100).toFixed(0) + "%权益≈$" + maxBudget.toLocaleString(undefined, { maximumFractionDigits: 0 }) +
-        " − 已占用 $" + used.toLocaleString(undefined, { maximumFractionDigits: 0 }) + "）";
+      document.getElementById("detailLong").textContent =
+        "want=" + rL.want + " · cap=" + rL.cap + " · 总占用上限≈$" + fmtMoney(rL.maxBudget) + " − 已占$" + fmtMoney(rL.used);
+      document.getElementById("detailShort").textContent =
+        "want=" + rS.want + " · cap=" + rS.cap + " · 总占用上限≈$" + fmtMoney(rS.maxBudget) + " − 已占$" + fmtMoney(rS.used);
 
-      window._lastQty = String(q);
+      window._qtyLong = String(rL.q);
+      window._qtyShort = String(rS.q);
     }
 
-    ["equity", "margin", "slice", "maxUsage", "position"].forEach(function (id) {
+    ["equity", "margin", "position", "sliceL", "maxL", "sliceS", "maxS"].forEach(function (id) {
       document.getElementById(id).addEventListener("input", calc);
     });
 
-    document.getElementById("copyBtn").addEventListener("click", function () {
-      var t = window._lastQty;
-      if (!t) {
-        var m = document.getElementById("qtyOut").textContent.match(/(\d+)/);
-        t = m ? m[1] : "";
-      }
+    document.getElementById("copyLong").addEventListener("click", function () {
+      var t = window._qtyLong;
       navigator.clipboard.writeText(t).then(function () {
-        document.getElementById("copyBtn").textContent = "已复制：" + t;
-        setTimeout(function () {
-          document.getElementById("copyBtn").textContent = "复制张数到剪贴板";
-        }, 1500);
+        document.getElementById("copyLong").textContent = "已复制 " + t;
+        setTimeout(function () { document.getElementById("copyLong").textContent = "复制做多张数"; }, 1200);
+      });
+    });
+    document.getElementById("copyShort").addEventListener("click", function () {
+      var t = window._qtyShort;
+      navigator.clipboard.writeText(t).then(function () {
+        document.getElementById("copyShort").textContent = "已复制 " + t;
+        setTimeout(function () { document.getElementById("copyShort").textContent = "复制做空张数"; }, 1200);
       });
     });
 

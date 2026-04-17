@@ -24,23 +24,29 @@ strategy(
 
 // 富途 VXM 参考：每张初始保证金（美元）；以你 APP 实时为准
 MARGIN_PER_CONTRACT = 1300.0
-// 每一笔想占用的「保证金预算」= 当前权益 × 本比例（10 份之一，且每份随权益重算）
-SLICE_EQUITY_PCT    = 10.0
-// 总保证金上限 = 当前权益 × 本比例（建议 0.70 ~ 0.80）
-MAX_MARGIN_USAGE    = 0.6
+
+// —— 多头 / 空头 分开设「单笔保证金预算比例」与「总占用上限」——
+// 空头：VIX 急涨时空 VXM 亏损加速，20 年回测易「爆仓」→ 空头宜明显更保守（仍穿仓则再降或减 pyramiding）。
+// 经验起点：多头 单笔 10% / 总占用 ≤60%；空头 单笔 4~6% / 总占用 ≤25~35%。以下为偏稳健默认。
+SLICE_EQUITY_PCT_LONG  = 10.0
+MAX_MARGIN_USAGE_LONG  = 0.7
+SLICE_EQUITY_PCT_SHORT = 3.0
+MAX_MARGIN_USAGE_SHORT = 0.1
 
 // 当前持仓估算占用保证金（张数 × 每张；多空绝对值）
 current_margin_used() =>
     math.abs(strategy.position_size) * MARGIN_PER_CONTRACT
 
-// 本笔张数：每笔 = 当前权益的 10% 作为保证金预算 / 1300；且加仓后总保证金 ≤ 权益×MAX_MARGIN_USAGE
-entry_qty_vxm() =>
+// direction: strategy.long → 用多头参数；strategy.short → 用空头参数（更严）
+entry_qty_vxm(isLong) =>
     float eq = strategy.equity
     if eq <= 0 or MARGIN_PER_CONTRACT <= 0
         0
-    float budget_slice      = eq * (SLICE_EQUITY_PCT / 100.0)
+    float slicePct = isLong ? SLICE_EQUITY_PCT_LONG : SLICE_EQUITY_PCT_SHORT
+    float maxUse   = isLong ? MAX_MARGIN_USAGE_LONG : MAX_MARGIN_USAGE_SHORT
+    float budget_slice      = eq * (slicePct / 100.0)
     float want_contracts    = math.floor(budget_slice / MARGIN_PER_CONTRACT)
-    float max_margin_budget = eq * MAX_MARGIN_USAGE
+    float max_margin_budget = eq * maxUse
     float used              = current_margin_used()
     float margin_remain     = max_margin_budget - used
     float cap_by_total      = margin_remain > 0 ? math.floor(margin_remain / MARGIN_PER_CONTRACT) : 0
@@ -54,7 +60,7 @@ getTrendLine() =>
     weekvalue = (close - weekllvLow) / (weekhhvHigh - weekllvLow) * 100
     weeksma1 = ta.sma(weekvalue, 5)
     weeksma2 = ta.sma(weeksma1, 3)
-    3 * weeksma1 - 2 * weeksma2 // 自动返回最后一行结果
+    3 * weeksma1 - 2 * weeksma2
 weekTrendLine = request.security('CBOE:VIX', "W", getTrendLine(), barmerge.gaps_off, barmerge.lookahead_off)
 plot(weekTrendLine, title="weekTrendLine", color=color.yellow, linewidth=2)
 weekClose = request.security('CBOE:VIX', "W", close, barmerge.gaps_off, barmerge.lookahead_off)
@@ -65,29 +71,25 @@ weekcloseBuySignal = weekTrendLine >= 50
 plotshape(weekbuySignal ? weekTrendLine : na, '买点', shape.triangleup, location.absolute, color.rgb(247, 188, 188), size = size.tiny)
 plotshape(weekcloseBuySignal ? weekTrendLine : na, '卖点', shape.triangledown, location.absolute, color.rgb(185, 255, 188), size = size.tiny)
 
-// 判断是否在周线的买卖点之间
 var bool inWeekBuyZone = false
 if weekbuySignal
     inWeekBuyZone := true
 if weekcloseBuySignal
     inWeekBuyZone := false
 
-// 日线
 getDayTrendLine() =>
     dayllvLow = ta.lowest(low, 20)
     dayhhvHigh = ta.highest(high, 20)
     dayvalue = (close - dayllvLow) / (dayhhvHigh - dayllvLow) * 100
     daysma1 = ta.sma(dayvalue, 5)
     daysma2 = ta.sma(daysma1, 3)
-    3 * daysma1 - 2 * daysma2 // 自动返回最后一行结果
+    3 * daysma1 - 2 * daysma2
 dayTrendLine = request.security('CBOE:VIX', "D", getDayTrendLine(), barmerge.gaps_off, barmerge.lookahead_off)
 dayClose = request.security('CBOE:VIX', "D", close, barmerge.gaps_off, barmerge.lookahead_off)
 plot(dayTrendLine, title="dayTrendLine", color=color.blue, linewidth=2)
 
 maClose = ta.sma(close, 5)
 
-
-// Variable calculations
 var2q = low[1]
 var3q = ta.sma(math.abs(low - var2q), 3) / ta.sma(math.max(low - var2q, 0), 3) * 100
 var4q = ta.ema(close * 1.3 > 0 ? var3q * 10 : var3q / 10, 3)
@@ -95,12 +97,9 @@ var5q = ta.lowest(low, 30)
 var6q = ta.highest(var4q, 30)
 var7q = ta.sma(close, 58) > 0 ? 1 : 0
 var8q = ta.ema(low <= var5q ? (var4q + var6q * 2) / 2 : 0, 3) / 999 * var7q
-// Flame Mountain calculation
 flame_mountain = var8q > 100 ? 100 : var8q
-// Plotting
 rising_flame = flame_mountain > 5 and flame_mountain > flame_mountain[1]
 
-// 与上面「底」对称：用 high / 最高价 镜像，用于判断顶（低价区用 low<=最低，高价区用 high>=最高）
 var2t = high[1]
 var3t = ta.sma(math.abs(high - var2t), 3) / ta.sma(math.max(high - var2t, 0), 3) * 100
 var4t = ta.ema(close * 1.3 > 0 ? var3t * 10 : var3t / 10, 3)
@@ -108,10 +107,6 @@ var5t = ta.highest(high, 30)
 var6t = ta.highest(var4t, 30)
 var8t = ta.ema(high >= var5t ? (var4t + var6t * 2) / 2 : 0, 3) / 999 * var7q
 flame_mountain_top = var8t > 100 ? 100 : var8t
-rising_peak = flame_mountain_top > 5 and flame_mountain_top > flame_mountain_top[1]
-
-// 底用「山焰抬升」；顶用对称：山焰抬升（在高位一侧），若要与底「反向」看拐点可改用 flame_mountain_top < 
-flame_mountain_top[1]
 rising_peak = flame_mountain_top > 5 and flame_mountain_top > flame_mountain_top[1]
 
 plot(rising_flame ? flame_mountain * 1.2 : na, style=plot.style_columns, color=color.new(#4444FF, 0), title="Flame Mountain Strong", linewidth = 4)
@@ -124,88 +119,23 @@ plot(rising_peak ? flame_mountain_top * 1.2 : na, style=plot.style_columns, colo
 plot(rising_peak ? flame_mountain_top * 1.2 : na, style=plot.style_columns, color=color.new(#FF8844, 50), title="Peak Flame Light", linewidth = 4)
 plot(rising_peak ? flame_mountain_top * 1.2 : na, style=plot.style_columns, color=color.new(#FF9944, 70), title="Peak Flame Faint", linewidth = 4)
 
-// 日线信号
 buySignal = (dayTrendLine<=10 and  dayClose<18 and weekTrendLine <= 40) or (weekbuySignal and dayTrendLine<=40 and dayClose<18) or (dayTrendLine<=5 and dayClose < 18)
 closeBuySignal = dayTrendLine >= 50 and dayClose[0] > dayClose[1] and dayClose >20
 plotshape(buySignal ? dayTrendLine : na, '买点', shape.triangleup, location.absolute, color.red, size = size.tiny)
 plotshape(closeBuySignal ? dayTrendLine : na, '卖点', shape.triangledown, location.absolute, color.green, size = size.tiny)
 
+longQty  = entry_qty_vxm(true)
+shortQty = entry_qty_vxm(false)
 
-
-
-// 68%
-// if (closeBuySignal )
-//     strategy.close('buy', '平仓')
-// if (buySignal )
-//     strategy.entry("buy", strategy.long)
-
-// 64%
-// if (closeBuySignal )
-//     strategy.close('buy', '平仓')
-// if ((buySignal and weekbuySignal) )
-//     strategy.entry("buy", strategy.long)
-
-
-// if (buySignal)
-//     strategy.entry("buy", strategy.long)
-// if (closeBuySignal)
-//     strategy.close("buy", '平仓')
-// var dayCloseBuySignal = false
-
-
-
-// 买入
-// if ((buySignal and not weekcloseBuySignal) or rising_flame )
-//     strategy.entry("buy", strategy.long)
-//     dayCloseBuySignal := false
-// if ((buySignal and not weekcloseBuySignal) )
-//     strategy.entry("buy", strategy.long)
-//     dayCloseBuySignal := false
-// if (rising_flame )
-//     strategy.entry("buy", strategy.long)
-    // dayCloseBuySignal := false
-// if (buySignal)
-//     strategy.entry("buy", strategy.long)
-longQty  = entry_qty_vxm()
-shortQty = entry_qty_vxm()
-
-
-// 卖出
-// if ((closeBuySignal and (not dayCloseBuySignal)))//  or rising_peak and weekcloseBuySignal 
-新增这个条件就是黄金顶
-//     dayCloseBuySignal := true
-//     strategy.close("buy", "平仓")
-// if (rising_peak) // (closeBuySignal and weekcloseBuySignal) or rising_peak // 
-//     strategy.close("buy", "平仓")
-// if (closeBuySignal and weekcloseBuySignal)
-//     strategy.close('buy', '平仓')
-// if ((closeBuySignal and weekcloseBuySignal) or rising_peak)
-//     strategy.close('buy', '平仓')
-// if (closeBuySignal or rising_peak)
-//     strategy.entry('sell', strategy.short)
-// if ((buySignal and weekbuySignal) )
-//     strategy.entry("buy", strategy.long)
-// if (buySignal and weekTrendLine < 20)
-//     strategy.entry("buy", strategy.long)
-
-
-if (buySignal or rising_flame)
+if (buySignal or (rising_flame and weekTrendLine < 30))
     strategy.close("sell", '平仓')
-if (buySignal or rising_flame) and longQty >= 1
+if (buySignal or (rising_flame and weekTrendLine < 30)) and longQty >= 1
     strategy.entry("buy", strategy.long, qty = longQty)
 
-
-if (closeBuySignal or rising_peak)
+if (closeBuySignal or (rising_peak))
     strategy.close('buy', '平仓')
-if (closeBuySignal or rising_peak) and shortQty >= 1
+if (closeBuySignal or (rising_peak)) and shortQty >= 1
     strategy.entry('sell', strategy.short, qty = shortQty)
 
-
-
-// 夏普
-// <0：垃圾
-// 0<夏普<0.5：一般，收益只略高于风险
-// 0.5<夏普<1：良好，震动中不错的性价比
-// 1<夏普<2：优秀，高风险高回报
-// >2极佳，顶级对冲基金
-// >3罕见，通常难以长期维持
+// 夏普（报表内可看数值；以下为经验区间）
+// <0：差 | 0~0.5：一般 | 0.5~1：尚可 | 1~2：偏高风险高收益 | >2：样本内极好，需警惕过拟合
