@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0d1117" />
-  <title>VXM 富途下单张数 · 与策略 entry_qty_vxm 对齐</title>
+  <title>VXM 富途张数 · 与策略脚本对齐</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -16,6 +16,7 @@
       --green: #3fb950;
       --red: #f85149;
       --orange: #d29922;
+      --purple: #a371f7;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -58,22 +59,34 @@
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .section-tag { font-size: 0.72rem; color: var(--green); margin-bottom: 6px; font-weight: 600; }
     .section-tag.short { color: var(--red); }
-    .result-row {
+    .section-tag.urgent { color: var(--purple); }
+    .result-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-top: 8px;
     }
-    .result-box { background: #0d1117; border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
-    .result-box .lbl { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
+    @media (max-width: 520px) {
+      .result-grid { grid-template-columns: 1fr; }
+    }
+    .result-box {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .result-box.urgent { border-color: #3d2f5c; box-shadow: inset 0 0 0 1px rgba(163, 113, 247, 0.15); }
+    .result-box .lbl { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; line-height: 1.35; }
     .result-big {
-      font-size: 1.75rem;
+      font-size: 1.65rem;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       color: var(--green);
     }
     .result-box.short .result-big { color: var(--red); }
-    .result-line { font-size: 0.8rem; color: var(--muted); margin-top: 8px; line-height: 1.45; }
+    .result-box.urgent .result-big { color: var(--purple); }
+    .result-box.urgent.short .result-big { color: var(--red); }
+    .result-line { font-size: 0.78rem; color: var(--muted); margin-top: 8px; line-height: 1.45; }
     .btn {
       display: block;
       width: 100%;
@@ -88,6 +101,7 @@
       cursor: pointer;
     }
     .btn.secondary { background: #21262d; color: var(--text); border: 1px solid var(--border); }
+    .btn.urgent { background: #3d2f5c; color: #e6e6ff; border: 1px solid #5c4a7a; }
     .btn:active { opacity: 0.9; }
     .note {
       font-size: 0.75rem;
@@ -104,16 +118,23 @@
       border-radius: 8px;
       background: #0d1117;
       border: 1px solid var(--border);
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       overflow-x: auto;
       white-space: pre-wrap;
       color: var(--text);
+    }
+    .h3mini {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 4px 0 10px;
     }
   </style>
 </head>
 <body>
   <h1>VXM 富途 · 张数计算器</h1>
-  <p class="sub">对齐 <code>vxm期货-日线-多空均做-+spx-trend-1分线.md</code> 中 <code>entry_qty_vxm(isLong)</code>：多头/空头使用不同 <code>SLICE_*</code> 与 <code>MAX_*</code>；佣金为回测用 <code>FUTU_VXM_COMMISSION_PER_CONTRACT=4</code>（不进入张数公式）。</p>
+  <p class="sub">与 <code>vxm期货-日线-多空均做-+spx-trend-1分线.md</code> 对齐：<code>entry_qty_vxm</code>（普通）与共振 <code>min(max(urgent,1), remaining_contracts_cap_*)</code>。佣金 <code>FUTU_VXM_COMMISSION_PER_CONTRACT=4</code> 不参与张数。</p>
 
   <div class="card">
     <h2>公共输入</h2>
@@ -132,8 +153,8 @@
   </div>
 
   <div class="card">
-    <h2>多头（开多 / 加多）— 与脚本一致</h2>
-    <p class="section-tag">SLICE_EQUITY_PCT_LONG · MAX_MARGIN_USAGE_LONG</p>
+    <h2>多头参数 — SLICE_EQUITY_PCT_LONG · MAX_MARGIN_USAGE_LONG</h2>
+    <p class="section-tag">用于 entry_qty_vxm(true) 与 entry_qty_vxm_urgent_long</p>
     <div class="row2">
       <div>
         <label for="sliceL">单笔保证金预算占权益（%）</label>
@@ -147,8 +168,8 @@
   </div>
 
   <div class="card">
-    <h2>空头（开空 / 加空）— 与脚本一致</h2>
-    <p class="section-tag short">SLICE_EQUITY_PCT_SHORT · MAX_MARGIN_USAGE_SHORT</p>
+    <h2>空头参数 — SLICE_EQUITY_PCT_SHORT · MAX_MARGIN_USAGE_SHORT</h2>
+    <p class="section-tag short">用于 entry_qty_vxm(false) 与 entry_qty_vxm_urgent_short</p>
     <div class="row2">
       <div>
         <label for="sliceS">单笔保证金预算占权益（%）</label>
@@ -162,26 +183,60 @@
   </div>
 
   <div class="card">
-    <h2>计算结果</h2>
-    <div class="result-row">
+    <h2>普通分支 — longQty / shortQty</h2>
+    <p class="h3mini">else 分支：buySignal / closeBuySignal / rising_*</p>
+    <div class="result-grid">
       <div class="result-box">
-        <div class="lbl">做多 longQty = entry_qty_vxm(true)</div>
+        <div class="lbl">longQty = entry_qty_vxm(true)<br /><span style="opacity:0.85">min(want, cap)，受总占用上限</span></div>
         <div class="result-big" id="qtyLong">—</div>
-        <button type="button" class="btn" id="copyLong">复制做多张数</button>
+        <button type="button" class="btn" id="copyLong">复制</button>
         <div class="result-line" id="detailLong"></div>
       </div>
       <div class="result-box short">
-        <div class="lbl">做空 shortQty = entry_qty_vxm(false)</div>
+        <div class="lbl">shortQty = entry_qty_vxm(false)<br /><span style="opacity:0.85">min(want, cap)，受总占用上限</span></div>
         <div class="result-big" id="qtyShort">—</div>
-        <button type="button" class="btn secondary" id="copyShort">复制做空张数</button>
+        <button type="button" class="btn secondary" id="copyShort">复制</button>
         <div class="result-line" id="detailShort"></div>
       </div>
     </div>
   </div>
 
-  
+  <div class="card">
+    <h2>共振分支 — longQtyUrgent / shortQtyUrgent</h2>
+    <p class="h3mini">脚本：min(max(entry_qty_vxm_urgent_*(), 1), remaining_contracts_cap_*)，单笔放宽后再用总占用剩余张数封顶</p>
+    <div class="result-grid">
+      <div class="result-box urgent">
+        <div class="lbl">longQtyUrgent — dualBuyUrgent<br /><span style="opacity:0.85">min(max(urgent_long,1), remaining_contracts_cap_long)</span></div>
+        <div class="result-big" id="qtyUrgentLong">—</div>
+        <button type="button" class="btn urgent" id="copyUrgentLong">复制</button>
+        <div class="result-line" id="detailUrgentLong"></div>
+      </div>
+      <div class="result-box urgent short">
+        <div class="lbl">shortQtyUrgent — dualExitUrgent<br /><span style="opacity:0.85">min(max(urgent_short,1), remaining_contracts_cap_short)</span></div>
+        <div class="result-big" id="qtyUrgentShort">—</div>
+        <button type="button" class="btn urgent" id="copyUrgentShort">复制</button>
+        <div class="result-line" id="detailUrgentShort"></div>
+      </div>
+    </div>
+    <p class="note">若 Pine 里已注释卖共振开空，shortQtyUrgent 仅作公式对照。封顶后单笔不再超过「总占用上限 − 已占用」折算的张数，更贴近富途可开仓量（仍与券商实时规则有偏差）。</p>
+  </div>
 
-  
+  <div class="card">
+    <h2>公式摘要</h2>
+    <details>
+      <summary>展开 Pine 等价式</summary>
+      <pre>entry_qty_vxm(isLong):
+  want = floor(eq * SLICE% / 100 / MARGIN_PER_CONTRACT)
+  cap  = floor((eq * MAX% - |pos|*MARGIN) / MARGIN_PER_CONTRACT)
+  return max(0, min(want, cap))
+
+entry_qty_vxm_urgent_long / _short:
+  want = floor(eq * SLICE_LONG% 或 SLICE_SHORT% / 100 / MARGIN_PER_CONTRACT)
+  urgent = max(1, want)
+longQtyUrgent / shortQtyUrgent:
+  min(urgent, remaining_contracts_cap_long/short)   // 与 entry_qty 同源 cap</pre>
+    </details>
+  </div>
 
   <script>
     function floor(n) { return Math.floor(n); }
@@ -198,6 +253,26 @@
       var cap = marginRemain > 0 ? floor(marginRemain / margin) : 0;
       var q = Math.max(0, Math.min(want, cap));
       return { q: q, want: want, cap: cap, maxBudget: maxBudget, used: used, slicePct: slicePct, maxUse: maxUse };
+    }
+
+    /** 与 Pine entry_qty_vxm_urgent_long / entry_qty_vxm_urgent_short 一致（未封顶前） */
+    function entryQtyUrgentLong(eq, margin, sliceL) {
+      if (eq <= 0 || margin <= 0) return { q: 0, want: 0 };
+      var want = floor((eq * (sliceL / 100)) / margin);
+      var q = Math.max(1, want);
+      return { q: q, want: want };
+    }
+
+    function entryQtyUrgentShort(eq, margin, sliceS) {
+      if (eq <= 0 || margin <= 0) return { q: 0, want: 0 };
+      var want = floor((eq * (sliceS / 100)) / margin);
+      var q = Math.max(1, want);
+      return { q: q, want: want };
+    }
+
+    /** 与脚本 min(max(urgent,1), remaining cap) 一致；cap 与 entryQty 中 cap 同源 */
+    function urgentCapped(u, cap) {
+      return Math.min(Math.max(u.q, 1), cap);
     }
 
     function fmtMoney(x) {
@@ -218,46 +293,61 @@
       if (isNaN(maxS)) maxS = 0.1;
 
       if (eq <= 0 || margin <= 0) {
-        document.getElementById("qtyLong").textContent = "—";
-        document.getElementById("qtyShort").textContent = "—";
-        document.getElementById("detailLong").textContent = "";
-        document.getElementById("detailShort").textContent = "";
+        ["qtyLong", "qtyShort", "qtyUrgentLong", "qtyUrgentShort"].forEach(function (id) {
+          document.getElementById(id).textContent = "—";
+        });
+        ["detailLong", "detailShort", "detailUrgentLong", "detailUrgentShort"].forEach(function (id) {
+          document.getElementById(id).textContent = "";
+        });
         return;
       }
 
       var rL = entryQty(true, eq, margin, posAbs, sliceL, maxL, sliceS, maxS);
       var rS = entryQty(false, eq, margin, posAbs, sliceL, maxL, sliceS, maxS);
+      var uL = entryQtyUrgentLong(eq, margin, sliceL);
+      var uS = entryQtyUrgentShort(eq, margin, sliceS);
+      var longUrgent = urgentCapped(uL, rL.cap);
+      var shortUrgent = urgentCapped(uS, rS.cap);
 
       document.getElementById("qtyLong").textContent = rL.q + " 张";
       document.getElementById("qtyShort").textContent = rS.q + " 张";
+      document.getElementById("qtyUrgentLong").textContent = longUrgent + " 张";
+      document.getElementById("qtyUrgentShort").textContent = shortUrgent + " 张";
 
       document.getElementById("detailLong").textContent =
         "want=" + rL.want + " · cap=" + rL.cap + " · 总占用上限≈$" + fmtMoney(rL.maxBudget) + " − 已占$" + fmtMoney(rL.used);
       document.getElementById("detailShort").textContent =
         "want=" + rS.want + " · cap=" + rS.cap + " · 总占用上限≈$" + fmtMoney(rS.maxBudget) + " − 已占$" + fmtMoney(rS.used);
+      document.getElementById("detailUrgentLong").textContent =
+        "urgent=" + uL.q + " · cap(多)=" + rL.cap + " · min 后=" + longUrgent;
+      document.getElementById("detailUrgentShort").textContent =
+        "urgent=" + uS.q + " · cap(空)=" + rS.cap + " · min 后=" + shortUrgent;
 
       window._qtyLong = String(rL.q);
       window._qtyShort = String(rS.q);
+      window._qtyUrgentLong = String(longUrgent);
+      window._qtyUrgentShort = String(shortUrgent);
     }
 
     ["equity", "margin", "position", "sliceL", "maxL", "sliceS", "maxS"].forEach(function (id) {
       document.getElementById(id).addEventListener("input", calc);
     });
 
-    document.getElementById("copyLong").addEventListener("click", function () {
-      var t = window._qtyLong;
-      navigator.clipboard.writeText(t).then(function () {
-        document.getElementById("copyLong").textContent = "已复制 " + t;
-        setTimeout(function () { document.getElementById("copyLong").textContent = "复制做多张数"; }, 1200);
+    function bindCopy(btnId, key) {
+      document.getElementById(btnId).addEventListener("click", function () {
+        var t = window[key];
+        navigator.clipboard.writeText(t).then(function () {
+          var el = document.getElementById(btnId);
+          var prev = el.textContent;
+          el.textContent = "已复制 " + t;
+          setTimeout(function () { el.textContent = prev; }, 1200);
+        });
       });
-    });
-    document.getElementById("copyShort").addEventListener("click", function () {
-      var t = window._qtyShort;
-      navigator.clipboard.writeText(t).then(function () {
-        document.getElementById("copyShort").textContent = "已复制 " + t;
-        setTimeout(function () { document.getElementById("copyShort").textContent = "复制做空张数"; }, 1200);
-      });
-    });
+    }
+    bindCopy("copyLong", "_qtyLong");
+    bindCopy("copyShort", "_qtyShort");
+    bindCopy("copyUrgentLong", "_qtyUrgentLong");
+    bindCopy("copyUrgentShort", "_qtyUrgentShort");
 
     calc();
   </script>
