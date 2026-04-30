@@ -12,7 +12,7 @@ FUTU_VXM_COMMISSION_PER_CONTRACT = 4.0
 // · 佣金：cash_per_contract = FUTU_VXM_COMMISSION_PER_CONTRACT；每次**成交**计费，开、平各一次 ⇒ 约 2×/张/完整一轮
 // · 不使用策略属性面板里的订单大小与佣金；均以代码为准
 strategy(
-     "vxm期货-日线-多空均做-+spx-trend-1分线",
+     "vxm期货-2小时线-多空均做-测试版",
      overlay               = false,
      initial_capital       = 100000,
      currency              = currency.USD,
@@ -52,34 +52,6 @@ entry_qty_vxm(isLong) =>
     float cap_by_total      = margin_remain > 0 ? math.floor(margin_remain / MARGIN_PER_CONTRACT) : 0
     float q                 = math.min(want_contracts, cap_by_total)
     math.max(0, q)
-
-// 与 entry_qty_vxm 相同，但占用按 usedOverride（本 K 先平多/平空再反向开仓，避免张数仍按平仓前算）
-entry_qty_vxm_with_used(isLong, usedOverride) =>
-    float eq = strategy.equity
-    if eq <= 0 or MARGIN_PER_CONTRACT <= 0
-        0
-    float slicePct = isLong ? SLICE_EQUITY_PCT_LONG : SLICE_EQUITY_PCT_SHORT
-    float maxUse   = isLong ? MAX_MARGIN_USAGE_LONG : MAX_MARGIN_USAGE_SHORT
-    float budget_slice      = eq * (slicePct / 100.0)
-    float want_contracts    = math.floor(budget_slice / MARGIN_PER_CONTRACT)
-    float max_margin_budget = eq * maxUse
-    float used              = usedOverride
-    float margin_remain     = max_margin_budget - used
-    float cap_by_total      = margin_remain > 0 ? math.floor(margin_remain / MARGIN_PER_CONTRACT) : 0
-    float q                 = math.min(want_contracts, cap_by_total)
-    math.max(0, q)
-
-// 假设本 K 已平掉全部净多仓后的占用（仅净多仓时扣减；否则与 current 一致）
-margin_used_if_long_closed() =>
-    float p = strategy.position_size
-    float u = current_margin_used()
-    p > 0 ? u - p * MARGIN_PER_CONTRACT : u
-
-// 假设本 K 已平掉全部净空仓（close 含 id 为 sell 的仓位）后的占用：仅净空仓时扣减
-margin_used_if_short_closed() =>
-    float p = strategy.position_size
-    float u = current_margin_used()
-    p < 0 ? u - math.abs(p) * MARGIN_PER_CONTRACT : u
 
 // 与 entry_qty_vxm 中 cap_by_total 同源：总占用上限内还可再开几张（供共振张数封顶，贴近实盘保证金余量）
 remaining_contracts_cap_long() =>
@@ -153,6 +125,17 @@ dayTrendLine = request.security('CBOE:VIX', "D", getDayTrendLine(), barmerge.gap
 dayClose = request.security('CBOE:VIX', "D", close, barmerge.gaps_off, barmerge.lookahead_off)
 plot(dayTrendLine, title="dayTrendLine", color=color.blue, linewidth=2)
 
+get2HourTrendLine() =>
+    hourllvLow = ta.lowest(low, 20)
+    hourhhvHigh = ta.highest(high, 20)
+    hourvalue = (close - hourllvLow) / (hourhhvHigh - hourllvLow) * 100
+    hoursma1 = ta.sma(hourvalue, 5)
+    hoursma2 = ta.sma(hoursma1, 3)
+    3 * hoursma1 - 2 * hoursma2
+hourTrendLine = request.security('CBOE:VIX', "120", get2HourTrendLine(), barmerge.gaps_off, barmerge.lookahead_off)
+hourClose = request.security('CBOE:VIX', "120", close, barmerge.gaps_off, barmerge.lookahead_off)
+plot(hourTrendLine, title="hourTrendLine", color=color.gray, linewidth=2)
+
 maClose = ta.sma(close, 5)
 
 var2q = low[1]
@@ -189,12 +172,14 @@ closeBuySignal = dayTrendLine >= 50 and dayClose[0] > dayClose[1] and dayClose >
 plotshape(buySignal ? dayTrendLine : na, '买点', shape.triangleup, location.absolute, color.red, size = size.tiny)
 plotshape(closeBuySignal ? dayTrendLine : na, '卖点', shape.triangledown, location.absolute, color.green, size = size.tiny)
 
+// buy2HourSignal = (hourTrendLine<=10 and  hourClose<17 and weekTrendLine <= 40) or (weekbuySignal and hourTrendLine<=40 and hourClose<17) or (hourTrendLine<=5 and hourClose < 17)
+buy2HourSignal = hourTrendLine <= 50 and hourClose[0] < hourClose[1] and hourClose <20
+close2HourSignal = hourTrendLine >= 50 and hourClose[0] > hourClose[1] and hourClose >20
+plotshape(buy2HourSignal ? hourTrendLine : na, '2小时买点', shape.triangleup, location.absolute, color.silver, size = size.tiny)
+plotshape(close2HourSignal ? hourTrendLine : na, '2小时卖点', shape.triangledown, location.absolute, color.orange, size = size.tiny)
+
 longQty  = entry_qty_vxm(true)
 shortQty = entry_qty_vxm(false)
-// 先 close('buy') 平多再 entry('sell') 开空时，用平多后的占用算张数（见 else 里卖讯分支）
-shortQtyAfterCloseLong = entry_qty_vxm_with_used(false, margin_used_if_long_closed())
-// 先 close('sell') 平空再 entry('buy') 开多时，用平空后的占用算张数（见 else 里买讯分支）
-longQtyAfterCloseShort = entry_qty_vxm_with_used(true, margin_used_if_short_closed())
 
 // —— 日线 + 周线共振：优先级最高，可略破常规保证金/张数约束（至少保证能下单）；两档共振互斥，再执行普通逻辑 ——
 dualExitUrgent = closeBuySignal and weekcloseBuySignal
@@ -203,29 +188,63 @@ dualBuyUrgent  = buySignal and weekbuySignal
 shortQtyUrgent = dualExitUrgent ? math.min(math.max(entry_qty_vxm_urgent_short(), 1), remaining_contracts_cap_short()) : shortQty
 longQtyUrgent  = dualBuyUrgent ? math.min(math.max(entry_qty_vxm_urgent_long(), 1), remaining_contracts_cap_long()) : longQty
 
-// 在vx上测试时最大资产回测达到95%，不符合预期，但常规情况下收益客观
-// if dualExitUrgent
-//     // 先平多，再按放宽张数做空（与同 bar 其它分支互斥）
-//     strategy.close('buy', '周线日线共振-平多')
-//     if shortQtyUrgent >= 1
-//         strategy.entry('sell', strategy.short, qty = shortQtyUrgent)
-// else
-if dualBuyUrgent
-    // 与卖共振对称：先平空，再按放宽张数做多
-    strategy.close('sell', '周线日线共振-平空')
-    if longQtyUrgent >= 1
-        strategy.entry('buy', strategy.long, qty = longQtyUrgent)
-else
-    // 旧逻辑
-    if (buySignal or (rising_flame and weekTrendLine < 30))
-        strategy.close("sell", '平空')
-    if (buySignal or (rising_flame and weekTrendLine < 30)) and longQtyAfterCloseShort >= 1
-        strategy.entry("buy", strategy.long, qty = longQtyAfterCloseShort)
 
-    if (closeBuySignal or (rising_peak))
-        strategy.close('buy', '平多')  // id 为 buy 的是多仓；这里平多不是平空
-    if (closeBuySignal or (rising_peak)) and shortQtyAfterCloseLong >= 1
-        strategy.entry('sell', strategy.short, qty = shortQtyAfterCloseLong)
+// // 在vx上测试时最大资产回测达到95%，不符合预期，但常规情况下收益客观
+// // if dualExitUrgent
+// //     // 先平多，再按放宽张数做空（与同 bar 其它分支互斥）
+// //     strategy.close('buy', '周线日线共振-平多')
+// //     if shortQtyUrgent >= 1
+// //         strategy.entry('sell', strategy.short, qty = shortQtyUrgent)
+// // else 
+// if dualBuyUrgent
+//     // 与卖共振对称：先平空，再按放宽张数做多
+//     strategy.close('sell', '周线日线共振-平空')
+//     if longQtyUrgent >= 1
+//         strategy.entry('buy', strategy.long, qty = longQtyUrgent)
+// else
+//     // 旧逻辑
+//     if (buySignal or (rising_flame and weekTrendLine < 30))
+//         strategy.close("sell", '平仓')
+//     if (buySignal or (rising_flame and weekTrendLine < 30)) and longQty >= 1
+//         strategy.entry("buy", strategy.long, qty = longQty)
+
+//     if (closeBuySignal or (rising_peak))
+//         strategy.close('buy', '平仓')
+//     if (closeBuySignal or (rising_peak)) and shortQty >= 1
+//         strategy.entry('sell', strategy.short, qty = shortQty)
+
+// // 如果最近的周线出现weekcloseBuySignal，则接下里2小时线都只能做多
+// if weekcloseBuySignal
+//     buy2HourSignal := false
+//     close2HourSignal := false
+// // 如果最近的周线出现weekbuySignal，则接下里2小时线都只能做空
+// if weekbuySignal
+//     buy2HourSignal := false
+//     close2HourSignal := false
+
+// 如果前面时段出现的最近的点有weekcloseBuySignal，则接下里2小时线都只能做空，不能做多，反之，如果前面时段出现的最近的点有weekbuySignal，则接下里2小时线都只能做多，不能做空
+var bool onlyDoLong = true
+var bool onlyDoShort = true
+if  weekcloseBuySignal
+    onlyDoShort := true
+    onlyDoLong := false
+if  weekbuySignal
+    onlyDoLong := true
+    onlyDoShort := false
+
+// 让日线和2小时线有共振情况再买卖
+
+if ((buy2HourSignal or rising_flame or buySignal) and dayTrendLine < 50)
+    strategy.close("sell", '2小时平仓')
+if ((buy2HourSignal or rising_flame or buySignal) and dayTrendLine < 50) and longQty >= 1 and onlyDoLong
+    strategy.entry("buy", strategy.long, qty = longQty)
+
+if ((close2HourSignal or rising_peak or closeBuySignal) and dayTrendLine > 50)
+    strategy.close("buy", '2小时平仓')
+if ((close2HourSignal or rising_peak or closeBuySignal) and dayTrendLine > 50) and shortQty >= 1 and onlyDoShort
+    strategy.entry("sell", strategy.short, qty = shortQty)
+
+
 
 // 仍无「买共振」成交时可查：(1) 策略属性 pyramiding 是否已满（同向加仓笔数上限）(2) 图表上红三角在日线、粉三角在周线，须同一根 K 上 buySignal 与 weekbuySignal 同时为真，不能只看图形叠在一起
 // (3) 同 bar 若 dualExitUrgent 先成立会走卖共振分支（与周线买点互斥：weekTrendLine 不能同时 ≤5 与 ≥50）

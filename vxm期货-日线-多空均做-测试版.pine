@@ -12,7 +12,7 @@ FUTU_VXM_COMMISSION_PER_CONTRACT = 4.0
 // · 佣金：cash_per_contract = FUTU_VXM_COMMISSION_PER_CONTRACT；每次**成交**计费，开、平各一次 ⇒ 约 2×/张/完整一轮
 // · 不使用策略属性面板里的订单大小与佣金；均以代码为准
 strategy(
-     "vxm期货-日线-多空均做-+spx-trend-1分线",
+     "vxm期货-日线-多空均做-测试版",
      overlay               = false,
      initial_capital       = 100000,
      currency              = currency.USD,
@@ -20,12 +20,13 @@ strategy(
      commission_value      = FUTU_VXM_COMMISSION_PER_CONTRACT,
      default_qty_type      = strategy.fixed,
      default_qty_value     = 1,
-     pyramiding            = 9)  // 需要更多笔共振/普通加仓时再调大；与「本金扛不扛得住」无直接关系，扛得住与否看张数公式是否突破总占用上限
+     pyramiding            = 9,
+     process_orders_on_close  = true)  // 需要更多笔共振/普通加仓时再调大；与「本金扛不扛得住」无直接关系，扛得住与否看张数公式是否突破总占用上限
 
 // 富途 VXM 参考：每张初始保证金（美元）；以你 APP 实时为准
 MARGIN_PER_CONTRACT = 1300.0
 
-// —— 多头 / 空头 分开设「单笔保证金预算比例」与「总占用上限」——
+// —— 多头 / 空头 分开设「单笔保证金预算比例」与「a总占用上限」——
 // 空头：VIX 急涨时空 VXM 亏损加速，20 年回测易「爆仓」→ 空头宜明显更保守（仍穿仓则再降或减 pyramiding）。
 // 经验起点：多头 单笔 10% / 总占用 ≤60%；空头 单笔 4~6% / 总占用 ≤25~35%。以下为偏稳健默认。
 SLICE_EQUITY_PCT_LONG  = 10.0
@@ -222,9 +223,9 @@ else
     if (buySignal or (rising_flame and weekTrendLine < 30)) and longQtyAfterCloseShort >= 1
         strategy.entry("buy", strategy.long, qty = longQtyAfterCloseShort)
 
-    if (closeBuySignal or (rising_peak))
+    if (closeBuySignal or (rising_peak and weekTrendLine > 40))
         strategy.close('buy', '平多')  // id 为 buy 的是多仓；这里平多不是平空
-    if (closeBuySignal or (rising_peak)) and shortQtyAfterCloseLong >= 1
+    if (closeBuySignal or (rising_peak and weekTrendLine > 40)) and shortQtyAfterCloseLong >= 1
         strategy.entry('sell', strategy.short, qty = shortQtyAfterCloseLong)
 
 // 仍无「买共振」成交时可查：(1) 策略属性 pyramiding 是否已满（同向加仓笔数上限）(2) 图表上红三角在日线、粉三角在周线，须同一根 K 上 buySignal 与 weekbuySignal 同时为真，不能只看图形叠在一起

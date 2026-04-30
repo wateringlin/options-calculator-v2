@@ -11,16 +11,18 @@ FUTU_VXM_COMMISSION_PER_CONTRACT = 4.0
 // · 加码层数：pyramiding = 同向最多连续开仓「笔数−1」；只限制订单条数，不替你管保证金；保证金由下方 entry_qty_* 与 MAX_MARGIN_USAGE_* 约束
 // · 佣金：cash_per_contract = FUTU_VXM_COMMISSION_PER_CONTRACT；每次**成交**计费，开、平各一次 ⇒ 约 2×/张/完整一轮
 // · 不使用策略属性面板里的订单大小与佣金；均以代码为准
+// · process_orders_on_close：在 K 线**收盘**时触发委托（与策略测试器「在 K 线关闭时回测」一致，避免未收线价成交）
 strategy(
-     "vxm期货-日线-多空均做-+spx-trend-1分线",
-     overlay               = false,
-     initial_capital       = 100000,
-     currency              = currency.USD,
-     commission_type       = strategy.commission.cash_per_contract,
-     commission_value      = FUTU_VXM_COMMISSION_PER_CONTRACT,
-     default_qty_type      = strategy.fixed,
-     default_qty_value     = 1,
-     pyramiding            = 9)  // 需要更多笔共振/普通加仓时再调大；与「本金扛不扛得住」无直接关系，扛得住与否看张数公式是否突破总占用上限
+     "vxm期货-4小时线-多空均做-测试版",
+     overlay                  = false,
+     initial_capital          = 100000,
+     currency                 = currency.USD,
+     commission_type          = strategy.commission.cash_per_contract,
+     commission_value         = FUTU_VXM_COMMISSION_PER_CONTRACT,
+     default_qty_type         = strategy.fixed,
+     default_qty_value        = 1,
+     pyramiding               = 9,  // 需要更多笔共振/普通加仓时再调大；与「本金扛不扛得住」无直接关系，扛得住与否看张数公式是否突破总占用上限
+     process_orders_on_close  = true)
 
 // 富途 VXM 参考：每张初始保证金（美元）；以你 APP 实时为准
 MARGIN_PER_CONTRACT = 1300.0
@@ -52,6 +54,34 @@ entry_qty_vxm(isLong) =>
     float cap_by_total      = margin_remain > 0 ? math.floor(margin_remain / MARGIN_PER_CONTRACT) : 0
     float q                 = math.min(want_contracts, cap_by_total)
     math.max(0, q)
+
+// 与 entry_qty_vxm 相同，但占用按 usedOverride（本 K 先平多/平空再反向开仓，避免张数仍按平仓前算）
+entry_qty_vxm_with_used(isLong, usedOverride) =>
+    float eq = strategy.equity
+    if eq <= 0 or MARGIN_PER_CONTRACT <= 0
+        0
+    float slicePct = isLong ? SLICE_EQUITY_PCT_LONG : SLICE_EQUITY_PCT_SHORT
+    float maxUse   = isLong ? MAX_MARGIN_USAGE_LONG : MAX_MARGIN_USAGE_SHORT
+    float budget_slice      = eq * (slicePct / 100.0)
+    float want_contracts    = math.floor(budget_slice / MARGIN_PER_CONTRACT)
+    float max_margin_budget = eq * maxUse
+    float used              = usedOverride
+    float margin_remain     = max_margin_budget - used
+    float cap_by_total      = margin_remain > 0 ? math.floor(margin_remain / MARGIN_PER_CONTRACT) : 0
+    float q                 = math.min(want_contracts, cap_by_total)
+    math.max(0, q)
+
+// 假设本 K 已平掉全部净多仓后的占用（仅净多仓时扣减；否则与 current 一致）
+margin_used_if_long_closed() =>
+    float p = strategy.position_size
+    float u = current_margin_used()
+    p > 0 ? u - p * MARGIN_PER_CONTRACT : u
+
+// 假设本 K 已平掉全部净空仓（close 含 id 为 sell 的仓位）后的占用：仅净空仓时扣减
+margin_used_if_short_closed() =>
+    float p = strategy.position_size
+    float u = current_margin_used()
+    p < 0 ? u - math.abs(p) * MARGIN_PER_CONTRACT : u
 
 // 与 entry_qty_vxm 中 cap_by_total 同源：总占用上限内还可再开几张（供共振张数封顶，贴近实盘保证金余量）
 remaining_contracts_cap_long() =>
@@ -163,6 +193,10 @@ plotshape(closeBuySignal ? dayTrendLine : na, '卖点', shape.triangledown, loca
 
 longQty  = entry_qty_vxm(true)
 shortQty = entry_qty_vxm(false)
+// 先 close('buy') 平多再 entry('sell') 开空时，用平多后的占用算张数（见 else 里卖讯分支）
+shortQtyAfterCloseLong = entry_qty_vxm_with_used(false, margin_used_if_long_closed())
+// 先 close('sell') 平空再 entry('buy') 开多时，用平空后的占用算张数（见 else 里买讯分支）
+longQtyAfterCloseShort = entry_qty_vxm_with_used(true, margin_used_if_short_closed())
 
 // —— 日线 + 周线共振：优先级最高，可略破常规保证金/张数约束（至少保证能下单）；两档共振互斥，再执行普通逻辑 ——
 dualExitUrgent = closeBuySignal and weekcloseBuySignal
@@ -177,23 +211,35 @@ longQtyUrgent  = dualBuyUrgent ? math.min(math.max(entry_qty_vxm_urgent_long(), 
 //     strategy.close('buy', '周线日线共振-平多')
 //     if shortQtyUrgent >= 1
 //         strategy.entry('sell', strategy.short, qty = shortQtyUrgent)
-// else 
-if dualBuyUrgent
-    // 与卖共振对称：先平空，再按放宽张数做多
-    strategy.close('sell', '周线日线共振-平空')
-    if longQtyUrgent >= 1
-        strategy.entry('buy', strategy.long, qty = longQtyUrgent)
-else
-    // 旧逻辑
-    if (buySignal or (rising_flame and weekTrendLine < 30))
-        strategy.close("sell", '平仓')
-    if (buySignal or (rising_flame and weekTrendLine < 30)) and longQty >= 1
-        strategy.entry("buy", strategy.long, qty = longQty)
+// else
 
-    if (closeBuySignal or (rising_peak))
-        strategy.close('buy', '平仓')
-    if (closeBuySignal or (rising_peak)) and shortQty >= 1
-        strategy.entry('sell', strategy.short, qty = shortQty)
+// var bool onlyDoLong = true
+// var bool onlyDoShort = true
+// if  weekcloseBuySignal
+//     onlyDoShort := true
+//     onlyDoLong := false
+// if  weekbuySignal
+//     onlyDoLong := true
+//     onlyDoShort := false
+
+// if dualBuyUrgent
+//     // 与卖共振对称：先平空，再按放宽张数做多
+//     strategy.close('sell', '周线日线共振-平空')
+//     if longQtyUrgent >= 1
+//         strategy.entry('buy', strategy.long, qty = longQtyUrgent)
+// else
+// 旧逻辑
+if (buySignal or (rising_flame and weekTrendLine < 30))
+    strategy.close("sell", '平空')
+    lastShortEntryPrice := na
+if (buySignal or (rising_flame and weekTrendLine < 30)) and longQtyAfterCloseShort >= 1// and onlyDoLong
+    strategy.entry("buy", strategy.long, qty = longQtyAfterCloseShort)
+
+if (closeBuySignal or (rising_peak  and weekTrendLine > 50))
+    strategy.close('buy', '平多')  // id 为 buy 的是多仓；这里平多不是平空
+    lastLongEntryPrice := na
+if (closeBuySignal or (rising_peak  and weekTrendLine > 50)) and shortQtyAfterCloseLong >= 1 //and onlyDoShort
+    strategy.entry('sell', strategy.short, qty = shortQtyAfterCloseLong)
 
 // 仍无「买共振」成交时可查：(1) 策略属性 pyramiding 是否已满（同向加仓笔数上限）(2) 图表上红三角在日线、粉三角在周线，须同一根 K 上 buySignal 与 weekbuySignal 同时为真，不能只看图形叠在一起
 // (3) 同 bar 若 dualExitUrgent 先成立会走卖共振分支（与周线买点互斥：weekTrendLine 不能同时 ≤5 与 ≥50）
